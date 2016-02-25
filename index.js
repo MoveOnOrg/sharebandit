@@ -7,6 +7,7 @@ var session = require('express-session');
 var bodyParser = require('body-parser');
 var google = require('googleapis');
 var url = require('url');
+var SqlString = require('./node_modules/sequelize/lib/sql-string');
 var OAuth2 = google.auth.OAuth2;
 var oauth2Client = new OAuth2(
   config.oauth.clientId,
@@ -32,7 +33,7 @@ app.engine('html', swig.renderFile);
 app.set('view engine', 'html');
 app.set('views', __dirname + '/views');
 
-
+// Configure database models
 var Metadata = sequelize.define('metadata', {
   id: {type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true},
   url: Sequelize.STRING,
@@ -43,7 +44,7 @@ var Metadata = sequelize.define('metadata', {
   success_count: Sequelize.INTEGER,
   trial_count: Sequelize.INTEGER
 }, {
-  indexes: [ 
+  indexes: [
     { unique: true,
       fields: ['url']
     },
@@ -78,10 +79,6 @@ sequelize
   .sync()
   .then(function(err) {
     console.log('Table created!');
-    // Metadata.build({
-    //   url: 'http://example.com/',
-    //   version: 1
-    // }).save();
   }, function (err) {
     console.log('An error occurred while creating the table:', err);
   });
@@ -89,14 +86,36 @@ sequelize
 app.get('/',
   moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
   function (req, res) {
-
     res.render('home', {});
+	}
+);
+
+app.get('/admin/',
+  // moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
+  function (req, res) {
+    var query = url.parse(req.url, true).query;
+    var params = {};
+    if (query.q) {
+      sequelize
+        .query(
+          "SELECT DISTINCT url FROM metadata WHERE url LIKE ?",
+          {
+            replacements: ['%' + query.q + '%'],
+            type: sequelize.QueryTypes.SELECT
+          }
+        )
+        .then(function(urls) {
+          console.log(urls);
+          params.results = urls;
+        });
+    }
+    res.render('admin', params);
 	}
 );
 
 app.get('/r/:domain*',
   function (req, res) {
-    //NOTE: any caching layer: 
+    //NOTE: any caching layer:
     // in theory, you can whitelist domain matches, and if there is no abver,
     // just redirect skip 
     // we can also, in theory cache it for facebook clients + abver
