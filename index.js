@@ -1,8 +1,10 @@
 var config = require('./config.json');
+var _ = require('lodash');
 var express = require('express');
 var app = express();
 var session = require('express-session');
 var google = require('googleapis');
+var url = require('url');
 var OAuth2 = google.auth.OAuth2;
 var oauth2Client = new OAuth2(
   config.oauth.clientId,
@@ -60,6 +62,7 @@ app.get('/',
 
 app.get('/r/:domain*',
   function (req, res) {
+    console.log(req.params);
     //if (! (req.params.domain in config.domain_whitelist))
     //  res.404!
     res.vary('User-Agent')
@@ -67,14 +70,22 @@ app.get('/r/:domain*',
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
 
-    var proto = 'http' || config.domain_whitelist[res.params.domain].proto;
-
+    var proto = config.domain_whitelist[req.params.domain].proto;
 
     //https://developers.facebook.com/docs/sharing/webmasters/crawler
     if (/facebookexternalhit|Facebot/.test(req.get('User-Agent'))) {
       res.render('shareheaders', {});
     } else {
-      res.redirect(proto + res.params.domain + decodeURIComponent(res.params[0] || ''));
+      var resquery = _.clone(req.query);
+      delete resquery['abid'];
+      delete resquery['abver'];
+      console.log(resquery);
+      res.redirect(url.format({
+        protocol: proto,
+        hostname: req.params.domain,
+        path: decodeURIComponent(req.params[0] || ''),
+        query: resquery
+      }));
     }
   }
 );
