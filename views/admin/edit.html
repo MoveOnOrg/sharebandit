@@ -13,10 +13,19 @@
   <a href="/admin/add/" class="btn btn-default navbar-btn{% if not url %} active{% endif %}"><span class="glyphicon glyphicon-plus"></span> Add</a>
 </nav>
 
-<h1>{% if url %}Edit Page{% else %}Add Page{% endif %}</h1>
-
 {% if url %}
-<a href="/admin/delete/{{ url }}" class="btn btn-danger"><span class="glyphicon glyphicon-remove"></span> Delete</a>
+<div class="row">
+  <h1 class="col-md-8">Edit Page</h1>
+  <div class="col-md-4 text-right">
+    <a href="/admin/delete/{{ url }}" class="btn btn-danger"><span class="glyphicon glyphicon-remove"></span> Delete Page</a>
+  </div>
+</div>
+<div class="alert alert-info">
+  Share URL:
+  <input type="text" class="form-control" value="http://share.moveon.org/r/{{ url }}" />
+</div>
+{% else %}
+<h1>Add Page</h1>
 {% endif %}
 
 <form action="{% if url %}/admin/edit/{{url}}{% else %}/admin/add/{% endif %}" method="post">
@@ -26,7 +35,7 @@
   </div>
   {% if variants %}
     {% for variant in variants %}
-      <div class="panel panel-default">
+      <div class="well well-lg">
         <input type="hidden" name="id[{{variant.id}}]" value="{{variant.id}}" />
         <input type="hidden" name="version[{{variant.id}}]" value="{{variant.version}}" />
         <div class="form-group">

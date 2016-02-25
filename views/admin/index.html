@@ -14,11 +14,13 @@
 
 <h1>Admin</h1>
 
-{% if results %}
+{% if results.length > 0 %}
   <div class="list-group">
   {% for result in results %}
     <a href="/admin/edit/{{result.url}}" class="list-group-item">{{result.url}}</a>
   {% endfor %}
   </div>
+{% else %}
+  <div class="alert alert-info">No results found.</div>
 {% endif %}
 {% endblock %}

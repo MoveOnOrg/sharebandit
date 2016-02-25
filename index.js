@@ -120,7 +120,14 @@ addEditPost = function (req, res) {
       version: req.body.version[key]
     };
 
-    if (key == 'new') {
+    if (
+      (key == 'new') &&
+      (
+        metadata.headline != '' ||
+        metadata.text != '' ||
+        metadata.image_url != ''
+      )
+    ) {
       metadata.version = maxVersion + 1;
       Metadata.create(metadata);
     }
@@ -203,7 +210,7 @@ app.post('/admin/delete/*',
         }
       }).then(function(results) {
         res.redirect('/admin/');
-      });      
+      });
     }
     else {
       res.redirect('/admin/edit/' + url);
