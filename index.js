@@ -27,7 +27,7 @@ app.use(session({
   resave: true,
   saveUninitialized: false
 }));
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.engine('html', swig.renderFile);
 app.set('view engine', 'html');
 app.set('views', __dirname + '/views');
@@ -45,11 +45,8 @@ var Metadata = sequelize.define('metadata', {
 }, {
   indexes: [
     { unique: true,
-      fields: ['url']
-    },
-    { unique: true,
       fields: ['url', 'version']
-    },
+    }
   ]
 });
 
@@ -66,21 +63,8 @@ var Sharer = sequelize.define('sharer', {
   ]
 });
 
-sequelize
-  .authenticate()
-  .then(function(err) {
-    console.log('Connection has been established successfully.');
-  }, function (err) {
-    console.log('Unable to connect to the database:', err);
-  });
-
-sequelize
-  .sync()
-  .then(function(err) {
-    console.log('Table created!');
-  }, function (err) {
-    console.log('An error occurred while creating the table:', err);
-  });
+sequelize.authenticate();
+sequelize.sync();
 
 app.get('/',
   moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
@@ -94,42 +78,138 @@ app.get('/admin/',
   function (req, res) {
     var query = url.parse(req.url, true).query;
     var params = {};
+    var protocolRegex =  /^([^:]+:\/\/)/;
     if (query.q) {
       sequelize
         .query(
           "SELECT DISTINCT url FROM metadata WHERE url LIKE ?",
           {
-            replacements: ['%' + query.q + '%'],
+            replacements: ['%' + query.q.replace(protocolRegex, '') + '%'],
             type: sequelize.QueryTypes.SELECT
           }
         )
         .then(function(urls) {
-          console.log(urls);
           params.results = urls;
+          res.render('admin/index', params);
         });
     }
-    res.render('admin/index', params);
+    else {
+      res.render('admin/index', params);
+    }
 	}
 );
+
+addEditPost = function (req, res) {
+  var params = {};
+  var protocolRegex =  /^([^:]+:\/\/)/;
+  var url = req.body.url.replace(protocolRegex, '');
+  var maxVersion = _.reduce(req.body.version, function(result, value, key) {
+    if (key != 'new' && parseInt(value) > result) {
+      return parseInt(value);
+    }
+    return result;
+  }, 0);
+
+  _.forEach(req.body.id, function(value, key) {
+
+    var metadata = {
+      url: url,
+      headline: req.body.headline[key],
+      text: req.body.text[key],
+      image_url: req.body.image_url[key],
+      version: req.body.version[key]
+    };
+
+    if (key == 'new') {
+      metadata.version = maxVersion + 1;
+      Metadata.create(metadata);
+    }
+    else {
+      metadata.id = key;
+      Metadata.update(metadata, {where: {id: key}});
+    }
+
+  });
+
+  res.redirect('/admin/edit/' + url);
+
+};
 
 app.get('/admin/add/',
   // moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
   function (req, res) {
-    res.render('admin/add', {});
+    res.render('admin/edit', {url: '', variants: [{id: 'new', headline: '', text: '', image_url: ''}]});
 	}
 );
 
 app.post('/admin/add/',
   // moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
-  function (req, res) {
-    var metadata = {
-      url: req.body.url,
-      headline: req.body.headline,
-      text: req.body.text,
-      image_url: req.body.image_url
-    };
+  addEditPost
+);
 
-    // res.render('admin/add', {});
+app.get('/admin/edit/*',
+  // moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
+  function (req, res) {
+    var params = {variants: []};
+
+    Metadata.findAll({
+      where: {
+        url: req.params[0]
+      }
+    }).then(function(results) {
+      _.forEach(results, function(result) {
+        params.url = result.dataValues.url;
+        params.variants.push(result.dataValues);
+      });
+      params.variants.push({id: 'new', headline: '', text: '', image_url: ''});
+      res.render('admin/edit', params);
+    });
+
+	}
+);
+
+app.post('/admin/edit/*',
+  // moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
+  addEditPost
+);
+
+app.get('/admin/delete/*',
+  // moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
+  function (req, res) {
+
+    var url = req.params[0];
+
+    Metadata.findAll({
+      where: {
+        url: url
+      }
+    }).then(function(results) {
+      res.render('admin/delete', results[0].dataValues);
+    });
+
+	}
+);
+
+app.post('/admin/delete/*',
+  // moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
+  function (req, res) {
+
+    var url = req.params[0];
+
+    if (req.body.response == 'Yes, Delete') {
+      Metadata.destroy({
+        where: {
+          url: url
+        }
+      }).then(function(results) {
+        res.redirect('/admin/');
+      });      
+    }
+    else {
+      res.redirect('/admin/edit/' + url);
+    }
+
+
 	}
 );
 
@@ -139,7 +219,6 @@ app.get('/r/:domain*',
     // in theory, you can whitelist domain matches, and if there is no abver,
     // just redirect skip
     // we can also, in theory cache it for facebook clients + abver
-    console.log(req.params);
     if (! (req.params.domain in config.domain_whitelist)) {
       return res.status(404).send("Not found");
     }
@@ -157,7 +236,6 @@ app.get('/r/:domain*',
       var resquery = _.clone(req.query);
       delete resquery['abid'];
       delete resquery['abver'];
-      console.log(resquery);
       res.redirect(url.format({
         protocol: proto,
         hostname: req.params.domain,

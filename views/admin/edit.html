@@ -1,0 +1,49 @@
+{% extends '../page.html' %}
+
+{% block content %}
+
+<nav class="navbar navbar-default">
+  <form class="navbar-form navbar-left" action="/admin/" method="get" role="search">
+    <div class="form-group">
+      <label>Search by URL</label>
+      <input type="text" class="form-input" name="q" placeholder="http://..." />
+    </div>
+    <input type="submit" class="btn btn-default" value="Search" />
+  </form>
+  <a href="/admin/add/" class="btn btn-default navbar-btn{% if not url %} active{% endif %}"><span class="glyphicon glyphicon-plus"></span> Add</a>
+</nav>
+
+<h1>{% if url %}Edit Page{% else %}Add Page{% endif %}</h1>
+
+{% if url %}
+<a href="/admin/delete/{{ url }}" class="btn btn-danger"><span class="glyphicon glyphicon-remove"></span> Delete</a>
+{% endif %}
+
+<form action="{% if url %}/admin/edit/{{url}}{% else %}/admin/add/{% endif %}" method="post">
+  <div class="form-group">
+    <label>Page URL</label>
+    <input type="text" class="form-control" name="url" value="{{url}}" />
+  </div>
+  {% if variants %}
+    {% for variant in variants %}
+      <div class="panel panel-default">
+        <input type="hidden" name="id[{{variant.id}}]" value="{{variant.id}}" />
+        <input type="hidden" name="version[{{variant.id}}]" value="{{variant.version}}" />
+        <div class="form-group">
+          <label>Headline</label>
+          <input type="text" class="form-control" name="headline[{{variant.id}}]" value="{{variant.headline}}" />
+        </div>
+        <div class="form-group">
+          <label>Text</label>
+          <textarea class="form-control" name="text[{{variant.id}}]">{{variant.text}}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Image URL</label>
+          <input type="text" class="form-control" name="image_url[{{variant.id}}]" value="{{variant.image_url}}"/>
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+  <input type="submit" class="btn btn-primary" value="Save" />
+</form>
+{% endblock %}

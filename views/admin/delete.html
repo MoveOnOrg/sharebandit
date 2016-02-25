@@ -1,6 +1,7 @@
 {% extends '../page.html' %}
 
 {% block content %}
+
 <nav class="navbar navbar-default">
   <form class="navbar-form navbar-left" action="/admin/" method="get" role="search">
     <div class="form-group">
@@ -12,13 +13,14 @@
   <a href="/admin/add/" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-plus"></span> Add</a>
 </nav>
 
-<h1>Admin</h1>
+<h1>Are You Sure?</h1>
 
-{% if results %}
-  <div class="list-group">
-  {% for result in results %}
-    <a href="/admin/edit/{{result.url}}" class="list-group-item">{{result.url}}</a>
-  {% endfor %}
-  </div>
-{% endif %}
+<div class="alert alert-warning" role="alert">
+  Are you sure you want to delete the page at <code>{{ url }}</code>?
+</div>
+
+<form action="/admin/delete/{{url}}" method="post">
+  <input type="submit" class="btn btn-primary" name="response" value="No, Nevermind" />
+  <input type="submit" class="btn btn-danger" name="response" value="Yes, Delete" />
+</form>
 {% endblock %}
