@@ -247,10 +247,10 @@ app.get('/r/:domain*',
     var proto = domainInfo.proto;
 
     //https://developers.facebook.com/docs/sharing/webmasters/crawler
-    if (/facebookexternalhit|Facebot/.test(req.get('User-Agent'))) {
+    if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.query.abver)) {
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
       Metadata.findAll({
-        where:{'url':murl, 'id': req.query.abver},
+        where:{'url':murl, 'id': parseInt(req.query.abver)},
         attributes: ['id', 'success_count']
       }).then(function(trials) {
         if (trials.length == 0) {
