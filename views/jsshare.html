@@ -4,20 +4,21 @@
  */
 (function() {
   var elts = document.getElementsByClassName('sharebandit-fb');
+  var buildShareUrl = function(href) {
+    href = href.replace(/^https?:\/\//, '');
+    var shref = href.split('?');
+    return ('{{baseUrl}}'
+            + shref[0]
+            + '?abver={{abver}}&abid=' + parseInt(Math.random() * 100000000).toString(16)
+            + (shref[1] || ''));
+  };
+  var getUrl = function(href) {
+    return ('https://www.facebook.com/sharer/sharer.php?u='
+            + encodeURIComponent(buildShareUrl(href)));
+  };
+  
   for (var i=0,l=elts.length; i<l; i++) {
     var e = elts[i];
-    var buildShareUrl = function(href) {
-      href = href.replace(/^https?:\/\//, '');
-      var shref = href.split('?');
-      return ('{{baseUrl}}'
-              + shref[0]
-              + '?abver={{abver}}&abid=' + parseInt(Math.random() * 100000000).toString(16)
-              + (shref[1] || ''));
-    };
-    var getUrl = function(href) {
-      return ('https://www.facebook.com/sharer/sharer.php?u='
-              + encodeURIComponent(buildShareUrl(href)));
-    };
     if (e.hasAttribute('href')) {
       e.setAttribute('href', getUrl(e.getAttribute('href')));
     } else if (e.hasAttribute('data-href')) {
@@ -26,8 +27,10 @@
       e.setAttribute('href', getUrl(String(document.location)));
     }
 
-    if (window.MoveOnPetitionsData && MoveOnPetitionsData.fbURL) {
-      MoveOnPetitionsData.fbURL = buildShareUrl(MoveOnPetitionsData.fbURL);
-    }
   }
+
+  if (window.MoveOnPetitionsData && MoveOnPetitionsData.fbURL) {
+    MoveOnPetitionsData.fbURL = buildShareUrl(MoveOnPetitionsData.fbURL);
+  }
+
 })();
