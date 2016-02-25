@@ -32,40 +32,63 @@ app.engine('html', swig.renderFile);
 app.set('view engine', 'html');
 app.set('views', __dirname + '/views');
 
+
+var Metadata = sequelize.define('metadata', {
+  id: {type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true},
+  url: Sequelize.STRING,
+  headline: Sequelize.STRING,
+  text: Sequelize.STRING,
+  image_url: Sequelize.STRING,
+  version: Sequelize.INTEGER,
+  success_count: Sequelize.INTEGER,
+  trial_count: Sequelize.INTEGER
+}, {
+  indexes: [ 
+    { unique: true,
+      fields: ['url']
+    },
+    { unique: true,
+      fields: ['url', 'version']
+    },
+  ]
+});
+
+var Sharer = sequelize.define('sharer', {
+  key: Sequelize.STRING,
+  trial: {type: Sequelize.INTEGER,
+          references: { model: Metadata, key: 'id'}},
+  success_count: Sequelize.INTEGER
+}, {
+  indexes: [
+    { unique: true,
+      fields: ['key','trial']
+    }
+  ]
+});
+
+sequelize
+  .authenticate()
+  .then(function(err) {
+    console.log('Connection has been established successfully.');
+  }, function (err) {
+    console.log('Unable to connect to the database:', err);
+  });
+
+sequelize
+  .sync()
+  .then(function(err) {
+    console.log('Table created!');
+    // Metadata.build({
+    //   url: 'http://example.com/',
+    //   version: 1
+    // }).save();
+  }, function (err) {
+    console.log('An error occurred while creating the table:', err);
+  });
+
 app.get('/',
   moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
   function (req, res) {
-
-    var Metadata = sequelize.define('metadata', {
-      id: {type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true},
-      url: Sequelize.STRING,
-      headline: Sequelize.STRING,
-      text: Sequelize.STRING,
-      image_url: Sequelize.STRING,
-      version: Sequelize.INTEGER,
-      success_count: Sequelize.INTEGER,
-      trial_count: Sequelize.INTEGER
-    });
-
-    sequelize
-      .authenticate()
-      .then(function(err) {
-        console.log('Connection has been established successfully.');
-      }, function (err) {
-        console.log('Unable to connect to the database:', err);
-      });
-
-    sequelize
-      .sync({ force: true })
-      .then(function(err) {
-        console.log('Table created!');
-        // Metadata.build({
-        //   url: 'http://example.com/',
-        //   version: 1
-        // }).save();
-      }, function (err) {
-        console.log('An error occurred while creating the table:', err);
-      });
 
     res.render('home', {});
 	}
