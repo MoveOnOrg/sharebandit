@@ -7,6 +7,7 @@ var session = require('express-session');
 var bodyParser = require('body-parser');
 var google = require('googleapis');
 var url = require('url');
+var SqlString = require('./node_modules/sequelize/lib/sql-string');
 var OAuth2 = google.auth.OAuth2;
 var oauth2Client = new OAuth2(
   config.oauth.clientId,
@@ -15,10 +16,21 @@ var oauth2Client = new OAuth2(
 );
 var moveonAuth = require('./node_modules/moveon-auth');
 var swig  = require('swig');
+// Database models.
 var Sequelize = require('sequelize');
 var sequelize = new Sequelize(db.database, db.user, db.pass, {
   dialect: "postgres",
   port: 5432,
+});
+var Metadata = sequelize.define('metadata', {
+  id: {type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true},
+  url: Sequelize.STRING,
+  headline: Sequelize.STRING,
+  text: Sequelize.STRING,
+  image_url: Sequelize.STRING,
+  version: Sequelize.INTEGER,
+  success_count: Sequelize.INTEGER,
+  trial_count: Sequelize.INTEGER
 });
 
 // Configure Express app
@@ -36,17 +48,6 @@ app.get('/',
   moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
   function (req, res) {
 
-    var Metadata = sequelize.define('metadata', {
-      id: {type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true},
-      url: Sequelize.STRING,
-      headline: Sequelize.STRING,
-      text: Sequelize.STRING,
-      image_url: Sequelize.STRING,
-      version: Sequelize.INTEGER,
-      success_count: Sequelize.INTEGER,
-      trial_count: Sequelize.INTEGER
-    });
-
     sequelize
       .authenticate()
       .then(function(err) {
@@ -56,7 +57,7 @@ app.get('/',
       });
 
     sequelize
-      .sync({ force: true })
+      .sync()
       .then(function(err) {
         console.log('Table created!');
         // Metadata.build({
@@ -68,6 +69,29 @@ app.get('/',
       });
 
     res.render('home', {});
+	}
+);
+
+app.get('/admin/',
+  // moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
+  function (req, res) {
+    var query = url.parse(req.url, true).query;
+    var params = {};
+    if (query.q) {
+      sequelize
+        .query(
+          "SELECT DISTINCT url FROM metadata WHERE url LIKE ?",
+          {
+            replacements: ['%' + query.q + '%'],
+            type: sequelize.QueryTypes.SELECT
+          }
+        )
+        .then(function(urls) {
+          console.log(urls);
+          params.results = urls;
+        });
+    }
+    res.render('admin', params);
 	}
 );
 
