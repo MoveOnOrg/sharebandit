@@ -63,8 +63,9 @@ app.get('/',
 app.get('/r/:domain*',
   function (req, res) {
     console.log(req.params);
-    //if (! (req.params.domain in config.domain_whitelist))
-    //  res.404!
+    if (! (req.params.domain in config.domain_whitelist)) {
+      return res.status(404).send("Not found");
+    }
     res.vary('User-Agent')
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.setHeader("Pragma", "no-cache");
@@ -86,6 +87,7 @@ app.get('/r/:domain*',
         path: decodeURIComponent(req.params[0] || ''),
         query: resquery
       }));
+      //TODO: add a count for abver for abid after sending the redirect
     }
   }
 );
