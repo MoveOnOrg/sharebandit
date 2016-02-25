@@ -73,6 +73,9 @@ app.get('/',
 
 app.get('/r/:domain*',
   function (req, res) {
+    //NOTE: any caching layer: 
+    // in theory, you can whitelist domain matches, and if there is no abver,
+    // just redirect skip 
     console.log(req.params);
     if (! (req.params.domain in config.domain_whitelist)) {
       return res.status(404).send("Not found");
@@ -103,6 +106,18 @@ app.get('/r/:domain*',
   }
 );
 
+app.get('/js/:domain*',
+  function (req, res) {
+    if (! (req.params.domain in config.domain_whitelist)) {
+      return res.status(404).send("Not found");
+    }
+    //TODO: lookup domain+path
+    // get test items
+    // DO MAGIC to choose
+    // return JS with magic choice
+    res.render('jsshare', {abver: '1'});
+  }
+);
 // Launch server.
 var server = app.listen(config.port, function () {
   var port = server.address().port;
