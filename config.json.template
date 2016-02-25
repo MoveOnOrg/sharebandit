@@ -10,5 +10,11 @@
   },
   "baseUrl": "",
   "port": 80,
-  "sessionSecret": ""
+  "sessionSecret": "",
+
+  "domain_whitelist": {
+    "petitions.moveon.org": {
+      "proto": "http"
+    }
+  }
 }
