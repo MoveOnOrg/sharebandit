@@ -10,6 +10,10 @@
   "license": "GPLv2+",
   "devDependencies": {
     "express": "^4.13.4",
+    "sequelize": "^3.19.3",
     "swig": "^1.4.2"
+  },
+  "dependencies": {
+    "pg": "^4.4.6"
   }
 }
