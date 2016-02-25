@@ -251,12 +251,13 @@ app.get('/r/:domain*',
       var resquery = _.clone(req.query);
       delete resquery['abid'];
       delete resquery['abver'];
-      res.redirect(url.format({
+      var furl = url.format({
         protocol: proto,
         hostname: req.params.domain,
-        path: decodeURIComponent(req.params[0] || '/'),
+        pathname: decodeURIComponent(req.params[0]),
         query: resquery
-      }));
+      });
+      res.redirect(furl);
 
       //ASSUMING:
       //  on a share click, we INSERT a sharer with the key
@@ -281,6 +282,7 @@ app.get('/js/:domain*',
       where:{'url':murl},
       attributes: ['id', 'success_count']
     }).then(function(trials) {
+      res.set('Content-Type', 'text/javascript');
       var burl = config.baseUrl + '/r/';
       if (trials.length == 0) {
         return res.render('jsshare', {baseUrl: burl, abver: ''});
