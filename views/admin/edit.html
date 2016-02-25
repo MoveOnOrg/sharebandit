@@ -36,19 +36,30 @@
   {% if variants %}
     {% for variant in variants %}
       <div class="well well-lg">
-        <input type="hidden" name="id[{{variant.id}}]" value="{{variant.id}}" />
-        <input type="hidden" name="version[{{variant.id}}]" value="{{variant.version}}" />
-        <div class="form-group">
-          <label>Headline</label>
-          <input type="text" class="form-control" name="headline[{{variant.id}}]" value="{{variant.headline}}" />
-        </div>
-        <div class="form-group">
-          <label>Text</label>
-          <textarea class="form-control" name="text[{{variant.id}}]">{{variant.text}}</textarea>
-        </div>
-        <div class="form-group">
-          <label>Image URL</label>
-          <input type="text" class="form-control" name="image_url[{{variant.id}}]" value="{{variant.image_url}}"/>
+        <div class="row">
+          <div class="col-md-11">
+            <input type="hidden" name="id[{{variant.id}}]" value="{{variant.id}}" />
+            <input type="hidden" name="version[{{variant.id}}]" value="{{variant.version}}" />
+            <div class="form-group">
+              <label>Headline</label>
+              <input type="text" class="form-control" name="headline[{{variant.id}}]" value="{{variant.headline}}" />
+            </div>
+            <div class="form-group">
+              <label>Text</label>
+              <textarea class="form-control" name="text[{{variant.id}}]">{{variant.text}}</textarea>
+            </div>
+            <div class="form-group">
+              <label>Image URL</label>
+              <input type="text" class="form-control" name="image_url[{{variant.id}}]" value="{{variant.image_url}}"/>
+            </div>
+          </div>
+          <div class="col-md-1">
+            <div class="form-group text-right">
+              <div class="checkbox">
+                <label><input type="checkbox" name="delete[{{variant.id}}]" value="{{variant.id}}" /> Delete</label>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     {% endfor %}

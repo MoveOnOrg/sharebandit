@@ -27,6 +27,7 @@ app.use(session({
   resave: true,
   saveUninitialized: false
 }));
+app.use(express.static(__dirname + '/public'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.engine('html', swig.renderFile);
 app.set('view engine', 'html');
@@ -120,16 +121,23 @@ addEditPost = function (req, res) {
       version: req.body.version[key]
     };
 
-    if (
-      (key == 'new') &&
-      (
+    if (key == 'new') {
+      if (
         metadata.headline != '' ||
         metadata.text != '' ||
         metadata.image_url != ''
-      )
-    ) {
-      metadata.version = maxVersion + 1;
-      Metadata.create(metadata);
+      ) {
+        metadata.version = maxVersion + 1;
+        Metadata.create(metadata);
+      }
+    }
+    else if (_.indexOf(req.body.delete, key) > -1) {
+      Metadata.destroy({
+        where: {
+          url: url,
+          id: key
+        }
+      });
     }
     else {
       metadata.id = key;
