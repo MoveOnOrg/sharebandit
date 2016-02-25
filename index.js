@@ -163,21 +163,18 @@ app.get('/js/:domain*',
       return res.status(404).send("Not found");
     }
     var proto = config.domain_whitelist[req.params.domain].proto;
-    var murl = url.format({
-      protocol: proto,
-      hostname: req.params.domain,
-      path: decodeURIComponent(req.params[0] || '/')
-    })
+    var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
     Metadata.findAll({
       where:{'url':murl},
       attributes: ['id', 'success_count']
     }).then(function(trials) {
+      var burl = config.baseUrl + '/r/';
       if (trials.length == 0) {
-        return res.render('jsshare', {abver: ''});
+        return res.render('jsshare', {baseUrl: burl, abver: ''});
       } else {
         //TODO: BANDIT MAGIC!!!
         var randabver = trials[parseInt(Math.random() * trials.length)].id;
-        return res.render('jsshare', {abver: randabver});
+        return res.render('jsshare', {baseUrl: burl, abver: randabver});
       }
     })
   }
