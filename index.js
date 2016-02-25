@@ -55,7 +55,7 @@ var Metadata = sequelize.define('metadata', {
 
 var Sharer = sequelize.define('sharer', {
   key: Sequelize.STRING,
-  trial: {type: Sequelize.INTEGER,
+  trial: {type: Sequelize.INTEGER, //abver will reference this
           references: { model: Metadata, key: 'id'}},
   success_count: Sequelize.INTEGER
 }, {
@@ -99,6 +99,7 @@ app.get('/r/:domain*',
     //NOTE: any caching layer: 
     // in theory, you can whitelist domain matches, and if there is no abver,
     // just redirect skip 
+    // we can also, in theory cache it for facebook clients + abver
     console.log(req.params);
     if (! (req.params.domain in config.domain_whitelist)) {
       return res.status(404).send("Not found");
@@ -121,10 +122,20 @@ app.get('/r/:domain*',
       res.redirect(url.format({
         protocol: proto,
         hostname: req.params.domain,
-        path: decodeURIComponent(req.params[0] || ''),
+        path: decodeURIComponent(req.params[0] || '/'),
         query: resquery
       }));
-      //TODO: add a count for abver for abid after sending the redirect
+
+      //ASSUMING:
+      //  on a share click, we INSERT a sharer with the key
+      //  on creation of a trial (metadata row), we create a sharer with key=''
+      if (req.query.abver) {
+        sequelize.query("UPDATE sharer SET success_count = success_count + 1 WHERE key=$$key"
+                        + "AND trial=$$ver"
+                        , {'bind': {'key': (req.query.abid || ''),
+                                    'ver': (req.query.abver)
+                                   }});
+      }
     }
   }
 );
@@ -134,6 +145,7 @@ app.get('/js/:domain*',
     if (! (req.params.domain in config.domain_whitelist)) {
       return res.status(404).send("Not found");
     }
+
     //TODO: lookup domain+path
     // get test items
     // DO MAGIC to choose
