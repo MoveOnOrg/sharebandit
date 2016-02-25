@@ -248,8 +248,9 @@ app.get('/r/:domain*',
 
     //https://developers.facebook.com/docs/sharing/webmasters/crawler
     if (/facebookexternalhit|Facebot/.test(req.get('User-Agent'))) {
+      var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
       Metadata.findAll({
-        where:{'url':murl},
+        where:{'url':murl, 'id': req.query.abver},
         attributes: ['id', 'success_count']
       }).then(function(trials) {
         if (trials.length == 0) {
@@ -263,6 +264,12 @@ app.get('/r/:domain*',
             return res.status(404).send("Not found");
           }
         } else {
+          res.render('shareheaders', {
+            'extraProperties': domainInfo.extraProperties || [],
+            'title': trials[0].headline,
+            'description': trials[0].text,
+            'image': trials[0].image_url,
+            });
         }
       });
     } else {
