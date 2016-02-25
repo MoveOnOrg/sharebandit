@@ -1,7 +1,13 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <!--TODO: add og headers and stuff! -->
+    {% if title %}<meta property="og:title" content="{{title}}" />{% endif %}
+    {% if image %}<meta property="og:image" content="{{image}}" />{% endif %}
+    {% if description %}<meta property="og:description" content="{{description}}" />{% endif %}
+    {% for prop in extraProperties %}
+    <meta property="{{prop.name}}" content="{{prop.value}}" />
+    {% endfor %}
+
   </head>
   <body></body>
 </html>

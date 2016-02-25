@@ -234,11 +234,29 @@ app.get('/r/:domain*',
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
 
-    var proto = config.domain_whitelist[req.params.domain].proto;
+    var domainInfo = config.domain_whitelist[req.params.domain];
+    var pathname = req.params[0];
+    var proto = domainInfo.proto;
 
     //https://developers.facebook.com/docs/sharing/webmasters/crawler
     if (/facebookexternalhit|Facebot/.test(req.get('User-Agent'))) {
-      res.render('shareheaders', {});
+      Metadata.findAll({
+        where:{'url':murl},
+        attributes: ['id', 'success_count']
+      }).then(function(trials) {
+        if (trials.length == 0) {
+          if (/testshare/.test(pathname)) {
+            res.render('shareheaders', {
+              'extraProperties': domainInfo.extraProperties || [],
+              'title': "Fooooo",
+              'description': 'basdfasdf',
+            });
+          } else {
+            return res.status(404).send("Not found");
+          }
+        } else {
+        }
+      });
     } else {
       var resquery = _.clone(req.query);
       delete resquery['abid'];
@@ -246,7 +264,7 @@ app.get('/r/:domain*',
       var furl = url.format({
         protocol: proto,
         hostname: req.params.domain,
-        pathname: decodeURIComponent(req.params[0]),
+        pathname: decodeURIComponent(pathname),
         query: resquery
       });
       res.redirect(furl);
