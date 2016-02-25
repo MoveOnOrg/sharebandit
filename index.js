@@ -1,5 +1,14 @@
+var config = require('./config.json');
 var express = require('express');
 var app = express();
+var session = require('express-session');
+var google = require('googleapis');
+var OAuth2 = google.auth.OAuth2;
+var oauth2Client = new OAuth2(
+  config.oauth.clientId,
+  config.oauth.clientSecret,
+  config.baseUrl + '/auth/google/callback'
+);
 var swig  = require('swig');
 var Sequelize = require('sequelize');
 var sequelize = new Sequelize('sharebandit', 'sb', 'sb', {
@@ -71,7 +80,7 @@ app.get('/r/:domain*',
 );
 
 // Launch server.
-var server = app.listen(8080, function () {
+var server = app.listen(config.port, function () {
   var port = server.address().port;
-  console.log('App listening at %s:%s', 'http://sharebandit.dev', port);
+  console.log('App listening at %s:%s', config.baseUrl, port);
 });

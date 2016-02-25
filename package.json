@@ -14,6 +14,8 @@
     "swig": "^1.4.2"
   },
   "dependencies": {
+    "express-session": "^1.13.0",
+    "googleapis": "^2.1.7",
     "pg": "^4.4.6"
   }
 }

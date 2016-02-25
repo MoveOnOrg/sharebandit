@@ -1,0 +1,14 @@
+{
+  "postgresql" : {
+    "user": "",
+    "pass": "",
+    "database": ""
+  },
+  "oauth": {
+    "clientId": "",
+    "clientSecret": ""
+  },
+  "baseUrl": "",
+  "port": 80,
+  "sessionSecret": ""
+}
