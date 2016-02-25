@@ -7,7 +7,6 @@ var session = require('express-session');
 var bodyParser = require('body-parser');
 var google = require('googleapis');
 var url = require('url');
-var SqlString = require('./node_modules/sequelize/lib/sql-string');
 var OAuth2 = google.auth.OAuth2;
 var oauth2Client = new OAuth2(
   config.oauth.clientId,
@@ -109,7 +108,28 @@ app.get('/admin/',
           params.results = urls;
         });
     }
-    res.render('admin', params);
+    res.render('admin/index', params);
+	}
+);
+
+app.get('/admin/add/',
+  // moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
+  function (req, res) {
+    res.render('admin/add', {});
+	}
+);
+
+app.post('/admin/add/',
+  // moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
+  function (req, res) {
+    var metadata = {
+      url: req.body.url,
+      headline: req.body.headline,
+      text: req.body.text,
+      image_url: req.body.image_url
+    };
+
+    // res.render('admin/add', {});
 	}
 );
 
@@ -117,7 +137,7 @@ app.get('/r/:domain*',
   function (req, res) {
     //NOTE: any caching layer:
     // in theory, you can whitelist domain matches, and if there is no abver,
-    // just redirect skip 
+    // just redirect skip
     // we can also, in theory cache it for facebook clients + abver
     console.log(req.params);
     if (! (req.params.domain in config.domain_whitelist)) {
