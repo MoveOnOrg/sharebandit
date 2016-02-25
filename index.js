@@ -274,6 +274,7 @@ app.get('/js/:domain*',
       where:{'url':murl},
       attributes: ['id', 'success_count']
     }).then(function(trials) {
+      res.set('Content-Type', 'text/javascript');
       var burl = config.baseUrl + '/r/';
       if (trials.length == 0) {
         return res.render('jsshare', {baseUrl: burl, abver: ''});
