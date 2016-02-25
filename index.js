@@ -151,7 +151,7 @@ app.get('/r/:domain*',
       //We might want to consider auto-adding the row, AND/OR verifying that the url is correct
       // e.g. with AND trial=(SELECT id FROM metadata WHERE url=$$trialurl) -- but that would slow it down
       if (req.query.abver) {
-        Sharer.where({'key':(req.query.abid || ''), 'ver': (req.query.abver)}).increment(['success_count'])
+        Sharer.findAll({where:{'key':(req.query.abid || ''), 'ver': (req.query.abver)}}).increment(['success_count'])
       }
     }
   }
@@ -162,14 +162,24 @@ app.get('/js/:domain*',
     if (! (req.params.domain in config.domain_whitelist)) {
       return res.status(404).send("Not found");
     }
-
-    sequelize.
-
-    //TODO: lookup domain+path
-    // get test items
-    // DO MAGIC to choose
-    // return JS with magic choice
-    res.render('jsshare', {abver: ''});
+    var proto = config.domain_whitelist[req.params.domain].proto;
+    var murl = url.format({
+      protocol: proto,
+      hostname: req.params.domain,
+      path: decodeURIComponent(req.params[0] || '/')
+    })
+    Metadata.findAll({
+      where:{'url':murl},
+      attributes: ['id', 'success_count']
+    }).then(function(trials) {
+      if (trials.length == 0) {
+        return res.render('jsshare', {abver: ''});
+      } else {
+        //TODO: BANDIT MAGIC!!!
+        var randabver = trials[parseInt(Math.random() * trials.length)].id;
+        return res.render('jsshare', {abver: randabver});
+      }
+    })
   }
 );
 // Launch server.
