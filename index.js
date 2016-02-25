@@ -16,21 +16,10 @@ var oauth2Client = new OAuth2(
 );
 var moveonAuth = require('./node_modules/moveon-auth');
 var swig  = require('swig');
-// Database models.
 var Sequelize = require('sequelize');
 var sequelize = new Sequelize(db.database, db.user, db.pass, {
   dialect: "postgres",
   port: 5432,
-});
-var Metadata = sequelize.define('metadata', {
-  id: {type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true},
-  url: Sequelize.STRING,
-  headline: Sequelize.STRING,
-  text: Sequelize.STRING,
-  image_url: Sequelize.STRING,
-  version: Sequelize.INTEGER,
-  success_count: Sequelize.INTEGER,
-  trial_count: Sequelize.INTEGER
 });
 
 // Configure Express app
@@ -44,30 +33,59 @@ app.engine('html', swig.renderFile);
 app.set('view engine', 'html');
 app.set('views', __dirname + '/views');
 
+// Configure database models
+var Metadata = sequelize.define('metadata', {
+  id: {type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true},
+  url: Sequelize.STRING,
+  headline: Sequelize.STRING,
+  text: Sequelize.STRING,
+  image_url: Sequelize.STRING,
+  version: Sequelize.INTEGER,
+  success_count: Sequelize.INTEGER,
+  trial_count: Sequelize.INTEGER
+}, {
+  indexes: [
+    { unique: true,
+      fields: ['url']
+    },
+    { unique: true,
+      fields: ['url', 'version']
+    },
+  ]
+});
+
+var Sharer = sequelize.define('sharer', {
+  key: Sequelize.STRING,
+  trial: {type: Sequelize.INTEGER,
+          references: { model: Metadata, key: 'id'}},
+  success_count: Sequelize.INTEGER
+}, {
+  indexes: [
+    { unique: true,
+      fields: ['key','trial']
+    }
+  ]
+});
+
+sequelize
+  .authenticate()
+  .then(function(err) {
+    console.log('Connection has been established successfully.');
+  }, function (err) {
+    console.log('Unable to connect to the database:', err);
+  });
+
+sequelize
+  .sync()
+  .then(function(err) {
+    console.log('Table created!');
+  }, function (err) {
+    console.log('An error occurred while creating the table:', err);
+  });
+
 app.get('/',
   moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
   function (req, res) {
-
-    sequelize
-      .authenticate()
-      .then(function(err) {
-        console.log('Connection has been established successfully.');
-      }, function (err) {
-        console.log('Unable to connect to the database:', err);
-      });
-
-    sequelize
-      .sync()
-      .then(function(err) {
-        console.log('Table created!');
-        // Metadata.build({
-        //   url: 'http://example.com/',
-        //   version: 1
-        // }).save();
-      }, function (err) {
-        console.log('An error occurred while creating the table:', err);
-      });
-
     res.render('home', {});
 	}
 );
@@ -97,6 +115,9 @@ app.get('/admin/',
 
 app.get('/r/:domain*',
   function (req, res) {
+    //NOTE: any caching layer:
+    // in theory, you can whitelist domain matches, and if there is no abver,
+    // just redirect skip
     console.log(req.params);
     if (! (req.params.domain in config.domain_whitelist)) {
       return res.status(404).send("Not found");
@@ -127,6 +148,18 @@ app.get('/r/:domain*',
   }
 );
 
+app.get('/js/:domain*',
+  function (req, res) {
+    if (! (req.params.domain in config.domain_whitelist)) {
+      return res.status(404).send("Not found");
+    }
+    //TODO: lookup domain+path
+    // get test items
+    // DO MAGIC to choose
+    // return JS with magic choice
+    res.render('jsshare', {abver: '1'});
+  }
+);
 // Launch server.
 var server = app.listen(config.port, function () {
   var port = server.address().port;
