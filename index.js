@@ -247,14 +247,12 @@ app.get('/r/:domain*',
     var pathname = req.params[0];
     var proto = domainInfo.proto;
 
-    console.log('USERAGENT:', req.get('User-Agent'));
     var furl = url.format({
       'protocol': proto,
-      'hostname': req.params.domain,
+      'host': req.params.domain,
       'pathname': decodeURIComponent(pathname),
       'query': req.query
     });
-
     //https://developers.facebook.com/docs/sharing/webmasters/crawler
     if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.query.abver)) {
       var murl = (req.params.domain + decodeURIComponent(pathname || '/'));
@@ -272,6 +270,7 @@ app.get('/r/:domain*',
             return res.status(404).send("Not found");
           }
         } else {
+          console.log(furl);
           res.render('shareheaders', {
             'extraProperties': domainInfo.extraProperties || [],
             'title': trial.headline,
