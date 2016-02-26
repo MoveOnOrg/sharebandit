@@ -55,7 +55,8 @@ var Sharer = sequelize.define('sharer', {
   key: Sequelize.STRING,
   trial: {type: Sequelize.INTEGER, //abver will reference this
           references: { model: Metadata, key: 'id'}},
-  success_count: Sequelize.INTEGER
+  success_count: {type: Sequelize.INTEGER, 
+                  allowNull: false, defaultValue: 0},
 }, {
   indexes: [
     { unique: true,
@@ -277,8 +278,20 @@ app.get('/r/:domain*',
             'description': trial.text,
             'image': trial.image_url,
             'fullUrl': furl
-            });
-          //TODO: UPSERT sharer if abid is present
+          });
+          //UPSERT the sharer if abid is present:
+          if (req.query.abid) {
+            var newsharer = {'key': req.query.abid,
+                             'trial': (parseInt(req.query.abver) || 0)
+                            };
+            Sharer.findOne({'attributes': ["id"], 'where': newsharer})
+              .then(function(sharer) {
+                if (!sharer) {
+                  newsharer['success_count'] = 0; //until default
+                  Sharer.create(newsharer);
+                }
+              });
+          }
         }
       });
     } else {
@@ -290,7 +303,7 @@ app.get('/r/:domain*',
       //We might want to consider auto-adding the row, AND/OR verifying that the url is correct
       // e.g. with AND trial=(SELECT id FROM metadata WHERE url=$$trialurl) -- but that would slow it down
       if (req.query.abver) {
-        Sharer.findAll({where:{'key':(req.query.abid || ''), 'ver': (req.query.abver)}}).increment(['success_count'])
+        Sharer.findAll({where:{'key':(req.query.abid || ''), 'trial': (parseInt(req.query.abver) || 0)}}).increment(['success_count'])
       }
     }
   }
