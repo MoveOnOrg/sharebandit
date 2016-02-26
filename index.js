@@ -178,6 +178,7 @@ app.get('/admin/edit/*',
     }).then(function(results) {
       _.forEach(results, function(result) {
         params.url = result.dataValues.url;
+        params.shareUrl = config.baseUrl + '/r/' + result.dataValues.url;
         params.variants.push(result.dataValues);
       });
       params.variants.push({id: 'new', headline: '', text: '', image_url: ''});

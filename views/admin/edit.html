@@ -22,7 +22,7 @@
 </div>
 <div class="alert alert-info">
   Share URL:
-  <input type="text" disabled class="form-control" value="http://share.moveon.org/r/{{ url }}" />
+  <input type="text" readonly class="form-control" value="{{ shareUrl }}" />
 </div>
 {% else %}
 <h1>Add Page</h1>
@@ -58,6 +58,10 @@
               <div class="checkbox">
                 <label><input type="checkbox" name="delete[{{variant.id}}]" value="{{variant.id}}" /> Delete</label>
               </div>
+              {% if variant.id %}
+                id: {{variant.id}}
+                <a href="https://developers.facebook.com/tools/debug/og/object/?q={{ encodeURIComponent(shareUrl) }}%3Fabver%3D{{variant.id}}">refresh facebook cache</a>
+              {% endif %}
             </div>
           </div>
         </div>
