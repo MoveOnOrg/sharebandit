@@ -247,14 +247,19 @@ app.get('/r/:domain*',
     var proto = domainInfo.proto;
 
     console.log('USERAGENT:', req.get('User-Agent'));
+    var furl = url.format({
+      'protocol': proto,
+      'hostname': req.params.domain,
+      'pathname': decodeURIComponent(pathname),
+      'query': req.query
+    });
 
     //https://developers.facebook.com/docs/sharing/webmasters/crawler
     if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.query.abver)) {
-      var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
+      var murl = (req.params.domain + decodeURIComponent(pathname || '/'));
       Metadata.findOne({
         'where': { 'url':murl, 'id':parseInt(req.query.abver)}
       }).then(function(trial) {
-        console.log(trial);
         if (!trial) {
           if (/testshare/.test(pathname)) {
             res.render('shareheaders', {
@@ -271,20 +276,12 @@ app.get('/r/:domain*',
             'title': trial.headline,
             'description': trial.text,
             'image': trial.image_url,
+            'fullUrl': furl
             });
           //TODO: UPSERT sharer if abid is present
         }
       });
     } else {
-      var resquery = _.clone(req.query);
-      delete resquery['abid'];
-      delete resquery['abver'];
-      var furl = url.format({
-        protocol: proto,
-        hostname: req.params.domain,
-        pathname: decodeURIComponent(pathname),
-        query: resquery
-      });
       res.redirect(furl);
 
       //ASSUMING:

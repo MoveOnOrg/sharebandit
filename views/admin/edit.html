@@ -31,7 +31,7 @@
 <form action="{% if url %}/admin/edit/{{url}}{% else %}/admin/add/{% endif %}" method="post">
   <div class="form-group">
     <label>Page URL</label>
-    <input type="text" {% if url %}disabled {% endif %}class="form-control" name="url" value="{{url}}" />
+    <input type="text" {% if url %}readonly {% endif %}class="form-control" name="url" value="{{url}}" />
   </div>
   {% if variants %}
     {% for variant in variants %}
