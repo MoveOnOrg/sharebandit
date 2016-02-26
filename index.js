@@ -246,6 +246,8 @@ app.get('/r/:domain*',
     var pathname = req.params[0];
     var proto = domainInfo.proto;
 
+    console.log('USERAGENT:', req.get('User-Agent'));
+
     //https://developers.facebook.com/docs/sharing/webmasters/crawler
     if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.query.abver)) {
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
@@ -253,6 +255,8 @@ app.get('/r/:domain*',
         where:{'url':murl, 'id': parseInt(req.query.abver)},
         attributes: ['id', 'success_count']
       }).then(function(trials) {
+        console.log('TRIALS count:', trials.length);
+        console.log(trials);
         if (trials.length == 0) {
           if (/testshare/.test(pathname)) {
             res.render('shareheaders', {
