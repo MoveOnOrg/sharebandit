@@ -247,12 +247,6 @@ app.get('/r/:domain*',
     var pathname = req.params[0];
     var proto = domainInfo.proto;
 
-    var furl = url.format({
-      'protocol': proto,
-      'host': req.params.domain,
-      'pathname': decodeURIComponent(pathname),
-      'query': req.query
-    });
     //https://developers.facebook.com/docs/sharing/webmasters/crawler
     if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.query.abver)) {
       var murl = (req.params.domain + decodeURIComponent(pathname || '/'));
@@ -270,13 +264,13 @@ app.get('/r/:domain*',
             return res.status(404).send("Not found");
           }
         } else {
-          console.log(furl);
+
           res.render('shareheaders', {
             'extraProperties': domainInfo.extraProperties || [],
             'title': trial.headline,
             'description': trial.text,
             'image': trial.image_url,
-            'fullUrl': furl
+            'fullUrl': config.baseUrl + req.originalUrl
           });
           //UPSERT the sharer if abid is present:
           if (req.query.abid) {
@@ -294,6 +288,12 @@ app.get('/r/:domain*',
         }
       });
     } else {
+      var furl = url.format({
+        'protocol': proto,
+        'host': req.params.domain,
+        'pathname': decodeURIComponent(pathname),
+        'query': req.query
+      });
       res.redirect(furl);
 
       //ASSUMING:
