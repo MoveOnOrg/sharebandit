@@ -41,8 +41,8 @@ var Metadata = sequelize.define('metadata', {
   text: Sequelize.STRING,
   image_url: Sequelize.STRING,
   version: Sequelize.INTEGER,
-  success_count: Sequelize.INTEGER,
-  trial_count: Sequelize.INTEGER
+  success_count: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0},
+  trial_count: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0}
 }, {
   indexes: [
     { unique: true,
