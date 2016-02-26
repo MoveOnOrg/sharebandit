@@ -129,7 +129,10 @@ addEditPost = function (req, res) {
         metadata.image_url != ''
       ) {
         metadata.version = maxVersion + 1;
-        Metadata.create(metadata);
+        Metadata.create(metadata).then(function(finalmetadata) {
+          //WARNING: this should probably be in the same db session, or we risk corruption
+          Sharer.create({'trial': finalmetadata.id, 'key': ''});
+        });
       }
     }
     else if (_.indexOf(req.body.delete, key) > -1) {
@@ -302,7 +305,12 @@ app.get('/r/:domain*',
       //We might want to consider auto-adding the row, AND/OR verifying that the url is correct
       // e.g. with AND trial=(SELECT id FROM metadata WHERE url=$$trialurl) -- but that would slow it down
       if (req.query.abver) {
-        Sharer.findAll({where:{'key':(req.query.abid || ''), 'trial': (parseInt(req.query.abver) || 0)}}).increment(['success_count'])
+        Sharer.findOne({where:{'key':(req.query.abid || ''), 'trial': (parseInt(req.query.abver) || 0)}}).then(function(sharer) {
+          sharer.increment('success_count');
+        });
+        Metadata.findOne({where:{'id': (parseInt(req.query.abver) || 0)}}).then(function(metadata) {
+          metadata.increment('success_count');
+        });
       }
     }
   }
