@@ -251,13 +251,11 @@ app.get('/r/:domain*',
     //https://developers.facebook.com/docs/sharing/webmasters/crawler
     if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.query.abver)) {
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
-      Metadata.findAll({
-        where:{'url':murl, 'id': parseInt(req.query.abver)},
-        attributes: ['id', 'success_count']
-      }).then(function(trials) {
-        console.log('TRIALS count:', trials.length);
-        console.log(trials);
-        if (trials.length == 0) {
+      Metadata.findOne({
+        'where': { 'url':murl, 'id':parseInt(req.query.abver)}
+      }).then(function(trial) {
+        console.log(trial);
+        if (!trial) {
           if (/testshare/.test(pathname)) {
             res.render('shareheaders', {
               'extraProperties': domainInfo.extraProperties || [],
@@ -270,10 +268,11 @@ app.get('/r/:domain*',
         } else {
           res.render('shareheaders', {
             'extraProperties': domainInfo.extraProperties || [],
-            'title': trials[0].headline,
-            'description': trials[0].text,
-            'image': trials[0].image_url,
+            'title': trial.headline,
+            'description': trial.text,
+            'image': trial.image_url,
             });
+          //TODO: UPSERT sharer if abid is present
         }
       });
     } else {
