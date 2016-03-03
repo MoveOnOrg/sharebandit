@@ -307,9 +307,10 @@ app.get('/r/:domain*',
       //We might want to consider auto-adding the row, AND/OR verifying that the url is correct
       // e.g. with AND trial=(SELECT id FROM metadata WHERE url=$$trialurl) -- but that would slow it down
       if (req.query.abver) {
-        Sharer.findOne({where:{'key':(req.query.abid || ''), 'trial': (parseInt(req.query.abver) || 0)}}).then(function(sharer) {
-          sharer.increment('success_count');
-        });
+        Sharer.findOrCreate({where:{'key':(req.query.abid || ''), 'trial': (parseInt(req.query.abver) || 0)}})
+          .spread(function(sharer, created) {
+            sharer.increment('success_count');
+          });
         Metadata.findOne({where:{'id': (parseInt(req.query.abver) || 0)}}).then(function(metadata) {
           metadata.increment('success_count');
         });
