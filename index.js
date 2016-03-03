@@ -42,6 +42,7 @@ var Metadata = sequelize.define('metadata', {
   image_url: Sequelize.STRING,
   version: Sequelize.INTEGER,
   success_count: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0},
+  action_count: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0},
   trial_count: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0}
 }, {
   indexes: [
@@ -55,8 +56,8 @@ var Sharer = sequelize.define('sharer', {
   key: Sequelize.STRING,
   trial: {type: Sequelize.INTEGER, //abver will reference this
           references: { model: Metadata, key: 'id'}},
-  success_count: {type: Sequelize.INTEGER, 
-                  allowNull: false, defaultValue: 0},
+  success_count: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0},
+  action_count: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0},
 }, {
   indexes: [
     { unique: true,

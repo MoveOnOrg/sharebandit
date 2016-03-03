@@ -9,7 +9,8 @@
     var shref = href.split('?');
     return ('{{baseUrl}}'
             + shref[0]
-            + '?abver={{abver}}&abid=' + parseInt(Math.random() * 100000000).toString(16)
+            + '?abid=' + parseInt(Math.random() * 100000000).toString(16) 
+            + '&abver={{abver}}&'
             + (shref[1] || ''));
   };
   var getUrl = function(href) {
