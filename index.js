@@ -262,7 +262,7 @@ app.get('/r/:domain*',
     if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.query.abver)) {
       var murl = (req.params.domain + decodeURIComponent(pathname || '/'));
       Metadata.findOne({
-        'where': { 'url':murl, 'id':parseInt(req.query.abver)}
+        'where': { 'url':murl.replace(/.fb\d+/,''), 'id':parseInt(req.query.abver)}
       }).then(function(trial) {
         if (!trial) {
           if (/testshare/.test(pathname)) {
