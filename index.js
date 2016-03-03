@@ -251,6 +251,12 @@ app.get('/r/:domain*',
     var domainInfo = config.domain_whitelist[req.params.domain];
     var pathname = req.params[0];
     var proto = domainInfo.proto;
+    var furl = url.format({
+      'protocol': proto,
+      'host': req.params.domain,
+      'pathname': decodeURIComponent(pathname),
+      'query': req.query
+    });
 
     //https://developers.facebook.com/docs/sharing/webmasters/crawler
     if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.query.abver)) {
@@ -269,6 +275,8 @@ app.get('/r/:domain*',
             return res.status(404).send("Not found");
           }
         } else {
+          console.log('FACEBOOK furl', furl);
+          console.log('FACEBOOK orig', req.originalUrl);
 
           res.render('shareheaders', {
             'extraProperties': domainInfo.extraProperties || [],
@@ -293,12 +301,6 @@ app.get('/r/:domain*',
         }
       });
     } else {
-      var furl = url.format({
-        'protocol': proto,
-        'host': req.params.domain,
-        'pathname': decodeURIComponent(pathname),
-        'query': req.query
-      });
       res.redirect(furl);
 
       //ASSUMING:
