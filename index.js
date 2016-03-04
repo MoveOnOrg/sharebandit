@@ -21,6 +21,7 @@ var sequelize = new Sequelize(db.database, db.user, db.pass, {
   port: 5432,
 });
 
+
 // Configure Express app
 app.use(session({
 	secret: config.sessionSecret,
@@ -328,22 +329,35 @@ app.get('/js/:domain*',
     }
     var proto = config.domain_whitelist[req.params.domain].proto;
     var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
-    Metadata.findAll({
-      where:{'url':murl},
-      attributes: ['id', 'success_count']
-    }).then(function(trials) {
-      res.set('Content-Type', 'text/javascript');
-      var burl = config.baseUrl + '/r/';
-      if (trials.length == 0) {
+    // Metadata.findAll({
+    //   where:{'url':murl},
+    //   attributes: ['id', 'success_count']
+    // }).then(function(trials) {
+    //   res.set('Content-Type', 'text/javascript');
+    //   var burl = config.baseUrl + '/r/';
+    //   if (trials.length == 0) {
+    //     return res.render('jsshare', {baseUrl: burl, abver: ''});
+    //   } else {
+    //     //TODO: BANDIT MAGIC!!!
+    //     var randabver = trials[parseInt(Math.random() * trials.length)].id;
+    //     return res.render('jsshare', {baseUrl: burl, abver: randabver});
+    //   }
+    // })
+    var bandit = require('./bandit.js');
+    res.set('Content-Type', 'text/javascript');
+    var burl = config.baseUrl + '/r/';
+    bandit(murl, sequelize).then(function(trial_choice){
+      if (trial_choice == null) {
         return res.render('jsshare', {baseUrl: burl, abver: ''});
       } else {
-        //TODO: BANDIT MAGIC!!!
-        var randabver = trials[parseInt(Math.random() * trials.length)].id;
-        return res.render('jsshare', {baseUrl: burl, abver: randabver});
+        return res.render('jsshare', {baseUrl: burl, abver: trial_choice});
       }
     })
   }
 );
+
+
+
 // Launch server.
 var server = app.listen(config.port, function () {
   var port = server.address().port;

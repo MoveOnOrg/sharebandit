@@ -17,6 +17,8 @@
     "body-parser": "^1.15.0",
     "express-session": "^1.13.0",
     "googleapis": "^2.1.7",
-    "pg": "^4.4.6"
+    "pg": "^4.4.6",
+    "probability-distributions": "^0.8.5",
+    "sequelize": "^3.19.3"
   }
 }
