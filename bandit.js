@@ -20,6 +20,9 @@ var bayesBandit = function (url, sequelize){
     var query = 'SELECT trial, count(Sharers.success_count > 0) as success, count(key) as trials from Sharers join Metadata on (Metadata.id = Sharers.trial) where Metadata.url = ? group by trial'
 
     return new Promise(function (resolve, reject){
+      //TODO
+      //1. memoize for config.X number of most popular urls the results of variants (we want to choose rbeta each time (but maybe pop them)
+      //2. Milan wanted anything lower than (20*variants.length successes) we should just choose randomly
         sequelize
             .query(
               query,
