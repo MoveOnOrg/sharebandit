@@ -73,7 +73,7 @@ sequelize.sync();
 app.get('/',
   moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm,
   function (req, res) {
-    res.render('home', {});
+    res.redirect('/admin/');
 	}
 );
 
