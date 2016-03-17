@@ -14,18 +14,14 @@
 </nav>
 
 {% if url %}
-<div class="row">
-  <h1 class="col-md-8">Edit Page</h1>
-  <div class="col-md-4 text-right">
-    <a href="/admin/delete/{{ url }}" class="btn btn-danger"><span class="glyphicon glyphicon-remove"></span> Delete Page</a>
+  <div class="row">
+    <h1 class="col-md-8">Edit Page</h1>
+    <div class="col-md-4 text-right">
+      <a href="/admin/delete/{{ url }}" class="btn btn-danger"><span class="glyphicon glyphicon-remove"></span> Delete Page</a>
+    </div>
   </div>
-</div>
-<div class="alert alert-info">
-  Share URL:
-  <input type="text" readonly class="form-control" value="{{ shareUrl }}" />
-</div>
 {% else %}
-<h1>Add Page</h1>
+  <h1>Add Page</h1>
 {% endif %}
 
 <form action="{% if url %}/admin/edit/{{url}}{% else %}/admin/add/{% endif %}" method="post">
@@ -37,7 +33,7 @@
     {% for variant in variants %}
       <div class="well well-lg">
         <div class="row">
-          <div class="col-md-11">
+          <div class="col-md-9">
             <input type="hidden" name="id[{{variant.id}}]" value="{{variant.id}}" />
             <input type="hidden" name="version[{{variant.id}}]" value="{{variant.version}}" />
             <div class="form-group">
@@ -53,16 +49,22 @@
               <input type="text" class="form-control" name="image_url[{{variant.id}}]" value="{{variant.image_url}}"/>
             </div>
           </div>
-          <div class="col-md-1">
-            <div class="form-group text-right">
-              <div class="checkbox">
-                <label><input type="checkbox" name="delete[{{variant.id}}]" value="{{variant.id}}" /> Delete</label>
+          <div class="col-md-3">
+            {% if variant.id %}
+              <div class="from-group">
+                <label>ID: {{variant.id}}</label>
+                <a class="btn btn-primary" href="https://developers.facebook.com/tools/debug/og/object/?q={{ encodeURIComponent(shareUrl) }}%3Fabver%3D{{variant.id}}">Refresh Facebook Cache</a>
               </div>
-              {% if variant.id %}
-                id: {{variant.id}}
-                <a href="https://developers.facebook.com/tools/debug/og/object/?q={{ encodeURIComponent(shareUrl) }}%3Fabver%3D{{variant.id}}">refresh facebook cache</a>
-              {% endif %}
-            </div>
+              <div class="from-group">
+                <label>Share URL</label>
+                <input type="text" readonly class="form-control" value="{{ shareUrl }}?abver={{variant.id}}" />
+              </div>
+              <div class="form-group">
+                <div class="checkbox">
+                  <label><input type="checkbox" name="delete[{{variant.id}}]" value="{{variant.id}}" /> Delete</label>
+                </div>
+              </div>
+            {% endif %}
           </div>
         </div>
       </div>

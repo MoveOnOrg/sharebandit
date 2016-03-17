@@ -303,7 +303,6 @@ app.get('/r/:domain*',
       });
     } else {
       res.redirect(furl);
-
       //ASSUMING:
       //  on a share click, we INSERT a sharer with the key
       //  on creation of a trial (metadata row), we create a sharer with key=''
