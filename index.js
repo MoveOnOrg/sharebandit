@@ -345,13 +345,13 @@ app.get('/js/:domain*',
     var bandit = require('./bandit.js');
     res.set('Content-Type', 'text/javascript');
     var burl = config.baseUrl + '/r/';
-    bandit(murl, sequelize).then(function(trial_choice){
-      if (trial_choice == null) {
+    bandit(murl, sequelize).then(function(trialChoice) {
+      if (trialChoice == null) {
         return res.render('jsshare', {baseUrl: burl, abver: ''});
       } else {
-        return res.render('jsshare', {baseUrl: burl, abver: trial_choice});
+        return res.render('jsshare', {baseUrl: burl, abver: trialChoice});
       }
-    })
+    });
   }
 );
 
