@@ -11,13 +11,16 @@ var bayesBandit = function(url, sequelize) {
 //     choice<-which(p==max(p))[1]
 
 //     return(choice)
-// }
+//   }
 //   x = successes to date
-// n = trials to date for that variant
-// length = number of variants
-
+//   n = trials to date for that variant
+//   length = number of variants
 //   rbeta = The Beta function
-    var query = 'SELECT trial, count(Sharers.success_count > 0) as success, count(key) as trials from Sharers join Metadata on (Metadata.id = Sharers.trial) where Metadata.url = ? group by trial'
+
+    var query = ('SELECT trial, count(Sharers.success_count > 0) AS success, count(key) AS trials'
+                 +' FROM Sharers'
+                 +' JOIN Metadata on (Metadata.id = Sharers.trial)'
+                 +' WHERE Metadata.url = ? GROUP BY trial')
 
     return new Promise(function(resolve, reject) {
       //TODO
@@ -42,20 +45,21 @@ var bayesBandit = function(url, sequelize) {
               return 0.5 - Math.random();
             });
             resolve(randomized[0].trial);
+          } else {
+            var rbetas = variants.map(function(variant) {
+              return [
+                PD.rbeta(
+                  1,
+                  (1*variant.success) + 1,
+                  (1*variant.trials) - (1*variant.success) + 1
+                )[0],
+                variant.trial
+              ];
+            }).sort().reverse();
+            resolve(rbetas[0][1]);
           }
-          var rbetas = variants.map(function(variant) {
-            return [
-              PD.rbeta(
-                1,
-                1 * variant.success+1,
-                1 * variant.trials - 1 * variant.success + 1
-              )[0],
-              variant.trial
-            ];
-          }).sort().reverse();
-          resolve(rbetas[0][1]);
-        })
-      });
-}
+        });
+    });
+};
 
 module.exports = bayesBandit;
