@@ -51,6 +51,12 @@
           </div>
           <div class="col-md-3">
             {% if variant.id != 'new' %}
+              <div>Metrics:
+                <table border="1">
+                  <tr><td>successes</td><td>actions</td><td>trials</td></tr>
+                  <tr><td>{{variant.success_count}}</td><td>{{variant.action_count}}</td><td>{{variant.trial_count}}</td></tr>
+                </table>
+              </div>
               <div class="from-group">
                 <label>ID: {{variant.id}}</label>
                 <a class="btn btn-primary" href="https://developers.facebook.com/tools/debug/og/object/?q={{ encodeURIComponent(variant.shareUrl) }}">Refresh Facebook Cache</a>
