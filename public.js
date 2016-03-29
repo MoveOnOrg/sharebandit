@@ -1,9 +1,20 @@
 var config = require('./config.json');
 var url = require('url');
+var bandit = require('./bandit.js');
 
 var init = function(app, schema, sequelize) {
 
-  app.get('/r/:domain*',
+  app._shareUrl = function(href, abver) {
+    //based on href and abver, generate a url that can be shared
+    href = href.replace(/^https?:\/\//, '');
+    return (config.baseUrl
+            + '/r/'
+            + (abver || '0') + '/'
+            + href
+           );
+  };
+
+  app.get('/r/:abver/:domain*',
           function (req, res) {
             //NOTE: any caching layer:
             // in theory, you can whitelist domain matches, and if there is no abver,
@@ -28,10 +39,10 @@ var init = function(app, schema, sequelize) {
             });
             
             //https://developers.facebook.com/docs/sharing/webmasters/crawler
-            if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.query.abver)) {
+            if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.params.abver)) {
               var murl = (req.params.domain + decodeURIComponent(pathname || '/'));
               schema.Metadata.findOne({
-                'where': { 'url':murl.replace(/.fb\d+/,''), 'id':parseInt(req.query.abver)}
+                'where': { 'url':murl.replace(/.fb\d+/,''), 'id':parseInt(req.params.abver)}
               }).then(function(trial) {
                 if (!trial) {
                   if (/testshare/.test(pathname)) {
@@ -57,7 +68,7 @@ var init = function(app, schema, sequelize) {
                   //UPSERT the sharer if abid is present:
                   if (req.query.abid) {
                     var newsharer = {'key': req.query.abid,
-                                     'trial': (parseInt(req.query.abver) || 0)
+                                     'trial': (parseInt(req.params.abver) || 0)
                                     };
                     schema.Sharer.findOne({'attributes': ["id"], 'where': newsharer})
                       .then(function(sharer) {
@@ -96,29 +107,11 @@ var init = function(app, schema, sequelize) {
             }
             var proto = config.domain_whitelist[req.params.domain].proto;
             var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
-            // schema.Metadata.findAll({
-            //   where:{'url':murl},
-            //   attributes: ['id', 'success_count']
-            // }).then(function(trials) {
-            //   res.set('Content-Type', 'text/javascript');
-            //   var burl = config.baseUrl + '/r/';
-            //   if (trials.length == 0) {
-            //     return res.render('jsshare', {baseUrl: burl, abver: ''});
-            //   } else {
-            //     //TODO: BANDIT MAGIC!!!
-            //     var randabver = trials[parseInt(Math.random() * trials.length)].id;
-            //     return res.render('jsshare', {baseUrl: burl, abver: randabver});
-            //   }
-            // })
-            var bandit = require('./bandit.js');
             res.set('Content-Type', 'text/javascript');
-            var burl = config.baseUrl + '/r/';
+
             bandit(murl, sequelize).then(function(trialChoice) {
-              if (trialChoice == null) {
-                return res.render('jsshare', {baseUrl: burl, abver: ''});
-              } else {
-                return res.render('jsshare', {baseUrl: burl, abver: trialChoice});
-              }
+              var burl = app._shareUrl('', trialChoice);
+              return res.render('jsshare', {baseUrl: burl, abver: trialChoice});
             });
           }
          );

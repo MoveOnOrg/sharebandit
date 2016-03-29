@@ -38,6 +38,9 @@ app.set('views', __dirname + '/views');
 var public_views = require('./public.js')(app, schema, sequelize);
 
 var adminauth = moveonAuth({'oauth2Client': oauth2Client, 'app': app, 'domain': 'moveon.org'}).confirm;
+if (/\/\/localhost/.test(config.baseUrl) && config.develMode) {
+  adminauth = function(req,res,next) {next();};
+}
 var admin_views = require('./admin.js')(app, schema, sequelize, adminauth);
 
 app.get('/',

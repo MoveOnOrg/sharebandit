@@ -50,14 +50,14 @@
             </div>
           </div>
           <div class="col-md-3">
-            {% if variant.id %}
+            {% if variant.id != 'new' %}
               <div class="from-group">
                 <label>ID: {{variant.id}}</label>
-                <a class="btn btn-primary" href="https://developers.facebook.com/tools/debug/og/object/?q={{ encodeURIComponent(shareUrl) }}%3Fabver%3D{{variant.id}}">Refresh Facebook Cache</a>
+                <a class="btn btn-primary" href="https://developers.facebook.com/tools/debug/og/object/?q={{ encodeURIComponent(variant.shareUrl) }}">Refresh Facebook Cache</a>
               </div>
               <div class="from-group">
                 <label>Share URL</label>
-                <input type="text" readonly class="form-control" value="{{ shareUrl }}?abver={{variant.id}}" />
+                <input type="text" readonly class="form-control" value="{{ variant.shareUrl }}" />
               </div>
               <div class="form-group">
                 <div class="checkbox">
