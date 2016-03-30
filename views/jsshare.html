@@ -1,3 +1,4 @@
+//{{baseUrl}}
 /*  Add the class sharebandit-fb to an <A> tag or 
     something else.
     This will edit in-place the href, or data-href value in-place.
@@ -27,11 +28,8 @@
     } else {
       e.setAttribute('href', getUrl(String(document.location)));
     }
-
   }
-
   if (window.MoveOnPetitionsData && MoveOnPetitionsData.fbURL) {
     MoveOnPetitionsData.fbURL = buildShareUrl(MoveOnPetitionsData.fbURL);
   }
-
 })();

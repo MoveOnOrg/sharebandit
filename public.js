@@ -38,8 +38,15 @@ var init = function(app, schema, sequelize) {
               'query': req.query
             });
             
+            /// 1. Am I Facebook Crawler?
             //https://developers.facebook.com/docs/sharing/webmasters/crawler
             if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.params.abver)) {
+
+              //What does FB do if you send it a 302 (temporary redirect)?
+              // will it try to visit it again and get a different 302 if visiting again, or will it just
+              // cache it?
+              // If it DOES redirect each time, then /0/ could choose by bandit, itself
+
               var murl = (req.params.domain + decodeURIComponent(pathname || '/'));
               schema.Metadata.findOne({
                 'where': { 'url':murl.replace(/.fb\d+/,''), 'id':parseInt(req.params.abver)}
@@ -70,16 +77,17 @@ var init = function(app, schema, sequelize) {
                     var newsharer = {'key': req.query.abid,
                                      'trial': (parseInt(req.params.abver) || 0)
                                     };
-                    schema.Sharer.findOne({'attributes': ["id"], 'where': newsharer})
-                      .then(function(sharer) {
-                        if (!sharer) {
-                          newsharer['success_count'] = 0; //until default
-                          schema.Sharer.create(newsharer);
-                        }
-                      });
+                    schema.Sharer.findOrCreate({'where': newsharer}).spread(function(sharer, created) {
+                      if (created) {
+                        schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}}).then(function(metadata) {
+                          metadata.increment('trial_count');
+                        });
+                      }
+                    })
                   }
                 }
               });
+            /// 2. Am I a User?
             } else {
               res.redirect(furl);
               //ASSUMING:
@@ -87,15 +95,37 @@ var init = function(app, schema, sequelize) {
               //  on creation of a trial (metadata row), we create a sharer with key=''
               //We might want to consider auto-adding the row, AND/OR verifying that the url is correct
               // e.g. with AND trial=(SELECT id FROM metadata WHERE url=$$trialurl) -- but that would slow it down
-              if (req.query.abver) {
-                schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''), 'trial': (parseInt(req.query.abver) || 0)}})
+              if (req.params.abver) {
+                schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''), 'trial': (parseInt(req.params.abver) || 0)}})
                   .spread(function(sharer, created) {
                     sharer.increment('success_count');
                   });
-                schema.Metadata.findOne({where:{'id': (parseInt(req.query.abver) || 0)}}).then(function(metadata) {
+                schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}}).then(function(metadata) {
                   metadata.increment('success_count');
                 });
               }
+            }
+          }
+         );
+
+  //smallest GIF
+  //http://probablyprogramming.com/2009/03/15/the-tiniest-gif-ever
+  //base64_decode('R0lGODlhAQABAIABAP///wAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==')
+  var smallgif = [71,73,70,56,57,97,1,0,1,0,0,255,0,44,0,0,0,0,1,0,1,0,0,2,0,59].map(function(x){return String.fromCharCode(x);}).join('');
+  //transparent version
+  //smallgif = [71,73,70,56,57,97,1,0,1,0,0,0,0,33,249,4,1,10,0,1,0,44,0,0,0,0,1,0,1,0,0,2,2,76,1,0,59].map(function(x){return String.fromCharCode(x);}).join('');
+  app.get('/a/:abver/:domain*',
+          function (req, res) {
+            res.set('Content-Type', 'image/gif');
+            res.end(smallgif, 'binary');
+            if (req.params.abver) {
+              schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''), 'trial': (parseInt(req.params.abver) || 0)}})
+                .spread(function(sharer, created) {
+                  sharer.increment('action_count');
+                });
+              schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}}).then(function(metadata) {
+                metadata.increment('action_count');
+              });
             }
           }
          );
