@@ -2,29 +2,55 @@ var PD = require("probability-distributions");
 var Promise = require("bluebird");
 
 var bayesBandit = function(url, sequelize) {
-//   bandit<-function(x,n) {
-//     p<-numeric(length)
+  // returns a Promise which will resolve to a 'trial' choice for the url
 
-//     for (i in 1:length) {
-//      p[i]=rbeta(1, x[i]+1, n[i]-x[i]+1)
-//     }
-//     choice<-which(p==max(p))[1]
-
-//     return(choice)
-//   }
-//   x = successes to date
-//   n = trials to date for that variant
-//   length = number of variants
-//   rbeta = The Beta function
-
-    var query = ('SELECT trial, count(Sharers.success_count > 0) AS success, count(key) AS trials'
+  // algorithm summary
+  //   bandit<-function(x,n) {
+  //     p<-numeric(length)
+  //     for (i in 1:length) {
+  //      p[i]=rbeta(1, x[i]+1, n[i]-x[i]+1)
+  //     }
+  //     choice<-which(p==max(p))[1]
+  //     return(choice)
+  //   }
+  //   x = successes to date
+  //   n = trials to date for that variant
+  //   length = number of variants
+  //   rbeta = The Beta function
+  //      rbeta is basically doing some logarithmic/exponent stuff
+  //      but really only about ~5 per rbeta call, so it'll be pretty fast
+  
+  var query = ('SELECT trial, count(Sharers.success_count > 0) AS success, count(key) AS trials'
                  +' FROM Sharers'
                  +' JOIN Metadata on (Metadata.id = Sharers.trial)'
                  +' WHERE Metadata.url = ? GROUP BY trial')
 
-    return new Promise(function(resolve, reject) {
+  return new Promise(function(resolve, reject) {
       //TODO
-      //1. memoize for config.X number of most popular urls the results of variants (we want to choose rbeta each time (but maybe pop them)
+      // what is cacheable:
+      // * variant list:
+      //   * successes/trials
+      //   * in theory could generate a bunch at once and cache those
+      /*
+       cache_key_list = [ URLS ] (sorted by #hits, and then dropping dicts
+       cache_dict = {
+          <URL>: {
+            hits: 1, //this should decay each ...day?
+            variants: [
+               { // from db result
+                 trial: <var_id>,
+                 trials: <trial_count>,
+                 success: <trial_success>,
+
+                 // added
+                 // we should cache related to trials count
+                 rbeta_cache: []
+               }
+            ]
+            
+          }
+       }
+      */
       sequelize
         .query(
           query,
@@ -48,8 +74,9 @@ var bayesBandit = function(url, sequelize) {
           } else {
             var rbetas = variants.map(function(variant) {
               return [
+                //returns array of rbetas
                 PD.rbeta(
-                  1,
+                  1, //number of results wanted
                   (1*variant.success) + 1,
                   (1*variant.trials) - (1*variant.success) + 1
                 )[0],
