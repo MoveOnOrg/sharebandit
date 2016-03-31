@@ -1,12 +1,22 @@
 {
-  "postgresql" : {
-    "user": "",
-    "pass": "",
-    "database": ""
+  "db" : {
+    "dialect": "postgres",
+    "port": 5432,
+    "user": "sharebandit",
+    "pass": "sharebandit",
+    "database": "sharebandit"
+  },
+  "db<if you're using sqlite>": {
+    "NOTE": "you need to `npm install sqlite3`",
+    "dialect": "sqlite",
+    "storage": "sharebandit.sqlite"
   },
   "oauth": {
     "clientId": "",
     "clientSecret": ""
+  },
+  "oauthAllowedUsers": {
+    "domain": "moveon.org"
   },
   "baseUrl": "",
   "port": 80,
