@@ -13,7 +13,7 @@ var Sequelize = require('sequelize');
 
 var server
 
-var shutown = function() {
+var shutdown = function() {
   server.close();
 }
 

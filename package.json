@@ -1,17 +1,20 @@
 {
   "name": "sharebandit",
-  "version": "1.0.0",
+  "version": "0.8.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node_modules/mocha/bin/mocha tests/index.js"
   },
   "author": "",
   "license": "GPLv2+",
   "devDependencies": {
+    "expect.js": "^0.3.1",
     "express": "^4.13.4",
+    "mocha": "^2.4.5",
     "sequelize": "^3.19.3",
-    "swig": "^1.4.2"
+    "swig": "^1.4.2",
+    "sqlite3": "^3.1.2"
   },
   "dependencies": {
     "body-parser": "^1.15.0",
