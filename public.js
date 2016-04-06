@@ -82,6 +82,9 @@ var init = function(app, schema, sequelize) {
                         schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}}).then(function(metadata) {
                           metadata.increment('trial_count');
                         });
+                        schema.Bandit.create({
+                          'trial': (parseInt(req.params.abver) || 0),
+                        });
                       }
                     })
                   }
@@ -102,6 +105,13 @@ var init = function(app, schema, sequelize) {
                   });
                 schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}}).then(function(metadata) {
                   metadata.increment('success_count');
+                });
+                var Metadata_info = schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}});
+                schema.Bandit.create({
+                  'trial': (parseInt(req.params.abver) || 0),
+                  'success_count': Metadata_info.success_count,
+                  'action_count': Metadata_info.action_count,
+                  'trial_count': Metadata_info.trial_count
                 });
               }
             }
@@ -125,6 +135,13 @@ var init = function(app, schema, sequelize) {
                 });
               schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}}).then(function(metadata) {
                 metadata.increment('action_count');
+              });
+              var Metadata_info = schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}});
+              schema.Bandit.create({
+                'trial': (parseInt(req.params.abver) || 0),
+                'success_count': Metadata_info.success_count,
+                'action_count': Metadata_info.action_count,
+                'trial_count': Metadata_info.trial_count
               });
             }
           }
