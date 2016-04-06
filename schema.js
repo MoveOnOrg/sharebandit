@@ -37,7 +37,7 @@ var init = function(sequelize) {
     ]
   });
 
-  var Bandits = sequelize.define('bandits', {
+  var Bandit = sequelize.define('bandit', {
     trial: {type: Sequelize.INTEGER,
         references: {model: Metadata, key: 'id'}},
     success_count: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0},
