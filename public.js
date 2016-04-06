@@ -129,7 +129,6 @@ var init = function(app, schema, sequelize) {
               schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}}).then(function(metadata) {
                 metadata.increment('action_count');
               });
-              var Metadata_info = schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}});
             }
           }
          );
