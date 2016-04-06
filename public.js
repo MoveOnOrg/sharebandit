@@ -103,6 +103,9 @@ var init = function(app, schema, sequelize) {
                 schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}}).then(function(metadata) {
                   metadata.increment('success_count');
                 });
+                schema.Bandit.create({
+                  'trial': (parseInt(req.params.abver) || 0),
+                });
               }
             }
           }

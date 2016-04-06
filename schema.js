@@ -36,10 +36,22 @@ var init = function(sequelize) {
       }
     ]
   });
+
+  var Bandit = sequelize.define('bandit', {
+    trial: {type: Sequelize.INTEGER,
+        references: {model: Metadata, key: 'id'}},
+    time: {type: Sequelize.DATE, defaultValue: Sequelize.NOW}
+  }, {
+    indexes : [
+      { unique: false,
+        fields: ['trial', 'time']
+      }
+    ]
+  });
   
   sequelize.authenticate();
   sequelize.sync();
-  return {'Sharer': Sharer, 'Metadata': Metadata};
+  return {'Sharer': Sharer, 'Metadata': Metadata, 'Bandit': Bandit};
 }
 
 module.exports = init;
