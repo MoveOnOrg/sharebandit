@@ -54,7 +54,7 @@ var init = function(sequelize) {
   
   sequelize.authenticate();
   sequelize.sync();
-  return {'Sharer': Sharer, 'Metadata': Metadata, 'Bandits': Bandits};
+  return {'Sharer': Sharer, 'Metadata': Metadata, 'Bandit': Bandit};
 }
 
 module.exports = init;
