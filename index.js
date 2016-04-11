@@ -11,7 +11,8 @@ var googleAuth = require('./node_modules/google-auth');
 var swig  = require('swig');
 var Sequelize = require('sequelize');
 
-var server
+var dbconn = {};
+var server;
 
 var shutdown = function() {
   server.close();
@@ -40,6 +41,7 @@ var boot = function(config) {
   var db = config.db;
   var sequelize = new Sequelize(db.database, db.user, db.pass, db);
   var schema = require('./schema.js')(sequelize);
+  dbconn.schema = schema;
 
   //VIEWS
   var public_views = require('./public.js')(app, schema, sequelize);
@@ -76,5 +78,6 @@ if (require.main === module) {
 } else {
   exports.server = server;
   exports.boot = boot;
+  exports.db = dbconn;
   exports.shutdown = shutdown;
 }
