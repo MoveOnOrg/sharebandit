@@ -1,8 +1,7 @@
-var config = require('./config.json');
 var _ = require('lodash');
 var url = require('url');
 
-var init = function(app, schema, sequelize, adminauth) {
+var init = function(app, schema, sequelize, adminauth, config) {
 
 app.get('/admin/',
   adminauth,

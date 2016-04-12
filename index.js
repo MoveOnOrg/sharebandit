@@ -44,7 +44,7 @@ var boot = function(config) {
   dbconn.schema = schema;
 
   //VIEWS
-  var public_views = require('./public.js')(app, schema, sequelize);
+  var public_views = require('./public.js')(app, schema, sequelize, config);
 
   var adminauth;
   if (/\/\/localhost/.test(config.baseUrl) && config.develMode) {
@@ -60,7 +60,7 @@ var boot = function(config) {
                              'whitelist': config.oauthAllowedUsers
                             }).confirm);
   }
-  var admin_views = require('./admin.js')(app, schema, sequelize, adminauth);
+  var admin_views = require('./admin.js')(app, schema, sequelize, adminauth, config);
   
   app.get('/',
           adminauth,  function (req, res) {

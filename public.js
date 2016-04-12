@@ -1,8 +1,7 @@
-var config = require('./config.json');
 var url = require('url');
 var bandit = require('./bandit.js');
 
-var init = function(app, schema, sequelize) {
+var init = function(app, schema, sequelize, config) {
 
   app._shareUrl = function(href, abver) {
     //based on href and abver, generate a url that can be shared

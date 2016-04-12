@@ -60,8 +60,11 @@ describe('server', function() {
 
   var URL_AB = "http://example.com/a";
   var URL_AB_NOHTTP = URL_AB.substring(7);
+  var TRIAL_JS_URL = baseUrl + '/js/' + URL_AB_NOHTTP; //encodeURIComponent(URL_AB_NOHTTP);
+
   console.log('URL_AB_NOHTTP', URL_AB_NOHTTP);
   var TRIALS = [];
+
   //2. admin
   describe('admin', function() {
     //2.1 post to admin for new
@@ -113,6 +116,28 @@ describe('server', function() {
                          });
                      });
                    })
+    });
+  });
+  describe('js-load', function() {
+    //3.1 get JS and see diversity of content
+    var ITER_TIMES = 20;
+
+    it('should load JS', function(done) {
+      var jsResponses = [];
+      var firstLineRegex = new RegExp('^//'+baseUrl+'/r/(\\d+)/');
+      var timesEach = [0,0];
+      for (var i=0; i<ITER_TIMES; i++) {
+        request.get(TRIAL_JS_URL, function(err, response, body) {
+          expect(response.statusCode).to.equal(200);
+          ++(timesEach[TRIALS.indexOf(parseInt(body.match(firstLineRegex)[1]))])
+          if ((timesEach[0]+timesEach[1]) >= ITER_TIMES) {
+            //there's actually a 1/2^20 that this will fail, but hey -- statistics
+            expect(timesEach[0] > 0).to.equal(true);
+            expect(timesEach[1] > 0).to.equal(true);
+            done();
+          }
+        });
+      }
     });
   });
   after(app.shutdown);
