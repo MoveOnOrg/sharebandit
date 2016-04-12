@@ -4,17 +4,18 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node_modules/mocha/bin/mocha tests/index.js"
+    "test": "node_modules/.bin/istanbul test node_modules/.bin/_mocha -- tests/index.js"
   },
   "author": "",
   "license": "GPLv2+",
   "devDependencies": {
     "expect.js": "^0.3.1",
     "express": "^4.13.4",
+    "istanbul": "^0.4.3",
     "mocha": "^2.4.5",
     "sequelize": "^3.19.3",
-    "swig": "^1.4.2",
-    "sqlite3": "^3.1.2"
+    "sqlite3": "^3.1.2",
+    "swig": "^1.4.2"
   },
   "dependencies": {
     "body-parser": "^1.15.0",

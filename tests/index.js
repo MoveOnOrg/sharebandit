@@ -28,7 +28,9 @@ describe('server', function() {
   before(function() {
     app.boot({
       "db": {"dialect": "sqlite",
-             "storage": "testdb.sqlite"
+             "storage": "testdb.sqlite",
+             //THIS COULD BE USEFUL TO CHANGE if you are debugging some tests
+             "logging": false
             },
       "develMode": true,
       "baseUrl": baseUrl,
@@ -61,6 +63,7 @@ describe('server', function() {
   var URL_AB = "http://example.com/a";
   var URL_AB_NOHTTP = URL_AB.substring(7);
   var TRIAL_JS_URL = baseUrl + '/js/' + URL_AB_NOHTTP; //encodeURIComponent(URL_AB_NOHTTP);
+  var TRIAL_REDIRECT_URLS = [];
 
   console.log('URL_AB_NOHTTP', URL_AB_NOHTTP);
   var TRIALS = [];
@@ -126,10 +129,12 @@ describe('server', function() {
       var jsResponses = [];
       var firstLineRegex = new RegExp('^//'+baseUrl+'/r/(\\d+)/');
       var timesEach = [0,0];
+      //count a bunch of requests, and make sure we get some back from each trial version
       for (var i=0; i<ITER_TIMES; i++) {
         request.get(TRIAL_JS_URL, function(err, response, body) {
           expect(response.statusCode).to.equal(200);
-          ++(timesEach[TRIALS.indexOf(parseInt(body.match(firstLineRegex)[1]))])
+          var parsedUrl = body.match(firstLineRegex);
+          ++(timesEach[TRIALS.indexOf(parseInt(parsedUrl[1]))]);
           if ((timesEach[0]+timesEach[1]) >= ITER_TIMES) {
             //there's actually a 1/2^20 that this will fail, but hey -- statistics
             expect(timesEach[0] > 0).to.equal(true);
@@ -138,6 +143,58 @@ describe('server', function() {
           }
         });
       }
+    });
+  });
+
+  describe('redirect-url', function() {
+    it('should 404 on bad domain/url', function(done) {
+      request.get(baseUrl + '/r/200/evilsomethingelse.com/foo', function(err, response, body) {
+        expect(response.statusCode).to.equal(404);
+        done();
+      })
+    });
+
+    it('should load facebook with facebook client', function(done) {
+      TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
+        return (baseUrl + '/r/' + i + '/' + URL_AB_NOHTTP);
+      });
+      request.get({
+        'url': TRIAL_REDIRECT_URLS[0],
+        'headers': {
+          'User-Agent': "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+        }}, function(err, response, body) {
+          expect(response.statusCode).to.equal(200);
+          expect(/property="og:title"\s*content="fooHeadline1 SecondSave"/.test(body)).to.equal(true);
+          expect(/property="og:description"\s*content="fooText1"/.test(body)).to.equal(true);
+          expect(/property="og:image"\s*content="http:\/\/example.com\/image1111.jpg"/.test(body)).to.equal(true);
+          //test config param
+          expect(/property="og:type"\s*content="cause"/.test(body)).to.equal(true);
+          request.get({
+            'url': TRIAL_REDIRECT_URLS[1],
+            'headers': {
+              'User-Agent': "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+            }}, function(err, response, body) {
+              expect(response.statusCode).to.equal(200);
+              expect(/property="og:title"\s*content="barHeadline2222"/.test(body)).to.equal(true);
+              expect(/property="og:description"\s*content="barText2222"/.test(body)).to.equal(true);
+              expect(/property="og:image"/.test(body)).to.equal(false);
+              done();
+            });
+        })
+    });
+
+    it('should redirect without facebook client', function(done) {
+      TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
+        return (baseUrl + '/r/' + i + '/' + URL_AB_NOHTTP);
+      });
+      request.get({
+        'url': TRIAL_REDIRECT_URLS[0],
+        'followRedirect': false
+      }, function(err, response, body) {
+        expect(response.statusCode).to.equal(302);
+        expect(response.headers.location).to.equal(URL_AB);
+        done();
+      })
     });
   });
   after(app.shutdown);
