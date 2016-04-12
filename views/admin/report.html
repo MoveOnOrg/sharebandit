@@ -14,7 +14,8 @@
       var num_variants = 0;
       var id_to_col = {};
       {% for i in variants %}
-      data.addColumn('number', {{i.id}});
+      trial = "Trial " + {{i.id}};
+      data.addColumn('number', trial);
       num_variants++;
       id_to_col.id_{{i.id}} = num_variants; 
       {% endfor %}
@@ -23,11 +24,6 @@
       {% for i in variants %}
           calls.push(
              jQuery.getJSON('/admin/datajson/{{i.id}}', function(new_data){
-              function setDates(new_data){
-                var new_date = new Date(new_data.time);
-                new_data.time = new_date;
-              }
-              new_data.forEach(setDates);
               return new_data;
             })
           );
@@ -36,15 +32,10 @@
         var dataToGraph = multiresponse[0];
         dataToGraph.forEach(function(row) {
           var create_row = []
-          create_row[0] = row.time;
+          create_row[0] = new Date(row.time);
           for (i=1; i <= num_variants; i++) {
             var key = 'id_' + row.trial
-            console.log("key:", key);
-            console.log("dict:", id_to_col);
-            console.log("value:", id_to_col.id_1);
-            console.log("value?:", id_to_col.key); //this statement keeps coming back undefined, which makes the chart blank bc we can't add rows :(
-            console.log("i:", i);
-            if (i === id_to_col.key) {
+            if (i === id_to_col[key]) {
               create_row[i] = row.successes;
             } else {
               create_row[i] = null;
@@ -52,12 +43,13 @@
           }
           data.addRow(create_row);
       });
+        new google.visualization.LineChart(document.getElementById('chart_div')).draw(data, {curveType: "function",
+          width: 500, height: 400,
+          vAxis: {maxValue: 10}}
+      );
         });
 
-    new google.visualization.LineChart(document.getElementById('chart_div')).draw(data, {curveType: "function",
-              width: 500, height: 400,
-              vAxis: {maxValue: 10}}
-      );
+
       }
     </script>
 
