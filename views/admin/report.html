@@ -1,0 +1,74 @@
+{% extends '../page.html' %}
+
+{% block head %}
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+<script type="text/javascript">
+    google.charts.load('current', {'packages':['corechart']});
+    google.charts.setOnLoadCallback(drawChart);
+
+    function drawChart(dataToGraph) {
+      var data = new google.visualization.DataTable();
+      data.addColumn('datetime', 'Time');
+
+      var num_variants = 0;
+      var id_to_col = {};
+      {% for i in variants %}
+      trial = "Trial " + {{i.id}};
+      data.addColumn('number', trial);
+      num_variants++;
+      id_to_col.id_{{i.id}} = num_variants; 
+      {% endfor %}
+
+      var calls = [];
+      {% for i in variants %}
+          calls.push(
+             jQuery.getJSON('/admin/datajson/{{i.id}}', function(new_data){
+              return new_data;
+            })
+          );
+      {% endfor %}
+      $.when.apply($,calls).then(function(multiresponse) {
+        var dataToGraph = multiresponse[0];
+        dataToGraph.forEach(function(row) {
+          var create_row = []
+          create_row[0] = new Date(row.time);
+          for (i=1; i <= num_variants; i++) {
+            var key = 'id_' + row.trial
+            if (i === id_to_col[key]) {
+              create_row[i] = row.successes;
+            } else {
+              create_row[i] = null;
+            }
+          }
+          data.addRow(create_row);
+      });
+        new google.visualization.LineChart(document.getElementById('chart_div')).draw(data, {curveType: "function",
+          width: 500, height: 400,
+          vAxis: {maxValue: 10}}
+      );
+        });
+
+
+      }
+    </script>
+
+{% endblock %}
+
+{% block content %}
+<nav class="navbar navbar-default">
+  <form class="navbar-form navbar-left" action="/admin/" method="get" role="search">
+    <div class="form-group">
+      <label>Search by URL</label>
+      <input type="text" class="form-input" name="q" placeholder="http://..." />
+    </div>
+    <input type="submit" class="btn btn-default" value="Search" />
+  </form>
+  <a href="/admin/add/" class="btn btn-default navbar-btn{% if not url %} active{% endif %}"><span class="glyphicon glyphicon-plus"></span> Add</a>
+</nav>
+
+<!--Div that will hold the viz-->
+<div id="chart_div"></div>
+
+{% endblock %}
+
