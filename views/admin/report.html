@@ -14,7 +14,7 @@
       var num_variants = 0;
       var id_to_col = {};
       {% for i in variants %}
-      trial = "Trial " + {{i.id}};
+      trial = "Version " + {{i.id}};
       data.addColumn('number', trial);
       num_variants++;
       id_to_col.id_{{i.id}} = num_variants; 
@@ -66,6 +66,10 @@
   </form>
   <a href="/admin/add/" class="btn btn-default navbar-btn{% if not url %} active{% endif %}"><span class="glyphicon glyphicon-plus"></span> Add</a>
 </nav>
+
+<div>
+  <h3>Report for url {{variants[0].url }}</h3>
+</div>
 
 <!--Div that will hold the viz-->
 <div id="chart_div"></div>
