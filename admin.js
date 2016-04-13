@@ -161,6 +161,41 @@ app.post('/admin/delete/*',
 	}
 );
 
+app.get('/admin/datajson/*',
+  adminauth,
+  function (req, res) {
+    var data = {bandits: []}
+    schema.Bandit.findAll({
+      where: {
+        trial: req.params[0]
+      }
+    }).then(function(results) {
+      var index = 0;
+      _.forEach (results, function(result) {
+        index++;
+        result.dataValues.successes = index;
+        data.bandits.push(result.dataValues);
+      });
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.stringify(data.bandits));
+    });
+  });
+
+app.get('/admin/report/*',
+  adminauth,
+  function (req, res) {
+    var params = {variants: []};
+    schema.Metadata.findAll({
+      where: {
+        url: req.params[0]
+      }
+    }).then(function(results) {
+      _.forEach (results, function(result) {
+        params.variants.push(result.dataValues);
+        });
+      res.render('admin/report', params);
+      });
+    });
 }
 
 module.exports = init;
