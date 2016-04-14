@@ -24,6 +24,9 @@
           <img height="80" src="/img/bandito.png" alt="Share Bandit Logo" />
         </div>
         <ul class="nav navbar-nav navbar-right">
+          {% for m in modules %}
+          <li><a href="{{m.link}}">{{m.title}}</a></li>
+          {% endfor %}
           <li><a href="/logout">Logout</a></li>
         </ul>
       </div>

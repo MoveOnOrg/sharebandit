@@ -35,11 +35,20 @@ var boot = function(config) {
   app.set('view engine', 'html');
   app.set('views', __dirname + '/views');
 
+  var modules = [];
+
+  //MODULES
+  if (config.extensionModules) {
+    modules = config.extensionModules.map(function(m) {
+      return require(m);
+    });
+  }
 
   //MODELS
   var db = config.db;
   var sequelize = new Sequelize(db.database, db.user, db.pass, db);
   var schema = require('./schema.js')(sequelize);
+
 
   //VIEWS
   var public_views = require('./public.js')(app, schema, sequelize);
@@ -58,8 +67,18 @@ var boot = function(config) {
                              'whitelist': config.oauthAllowedUsers
                             }).confirm);
   }
-  var admin_views = require('./admin.js')(app, schema, sequelize, adminauth);
-  
+
+  //MODULES
+  // get the links that will be available in the admin
+  //  -- all other views, the module should setup itself
+  var moduleLinks = modules.map(function(m) {
+      return m(app, schema, sequelize, adminauth);
+  });
+
+  var admin_views = require('./admin.js')(app, schema, sequelize, adminauth, moduleLinks);
+
+
+
   app.get('/',
           adminauth,  function (req, res) {
             res.redirect('/admin/');
