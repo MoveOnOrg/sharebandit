@@ -11,7 +11,8 @@ var googleAuth = require('./node_modules/google-auth');
 var swig  = require('swig');
 var Sequelize = require('sequelize');
 
-var server
+var dbconn = {};
+var server;
 
 var shutdown = function() {
   server.close();
@@ -47,10 +48,11 @@ var boot = function(config) {
   var db = config.db;
   var sequelize = new Sequelize(db.database, db.user, db.pass, db);
   var schema = require('./schema.js')(sequelize);
+  dbconn.schema = schema;
 
 
   //VIEWS
-  var public_views = require('./public.js')(app, schema, sequelize);
+  var public_views = require('./public.js')(app, schema, sequelize, config);
 
   var adminauth;
   if (/\/\/localhost/.test(config.baseUrl) && config.develMode) {
@@ -81,9 +83,7 @@ var boot = function(config) {
   sequelize.authenticate();
   sequelize.sync();
 
-  var admin_views = require('./admin.js')(app, schema, sequelize, adminauth, moduleLinks);
-
-
+  var admin_views = require('./admin.js')(app, schema, sequelize, adminauth, config, moduleLinks);
 
   app.get('/',
           adminauth,  function (req, res) {
@@ -101,5 +101,6 @@ if (require.main === module) {
 } else {
   exports.server = server;
   exports.boot = boot;
+  exports.db = dbconn;
   exports.shutdown = shutdown;
 }
