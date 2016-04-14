@@ -42,6 +42,12 @@ var boot = function(config) {
     modules = config.extensionModules.map(function(m) {
       return require(m);
     });
+    modules.forEach(function(m) {
+      if (m.static) {
+        console.log(m.static);
+        app.use(express.static(m.static));
+      }
+    });
   }
 
   //MODELS
