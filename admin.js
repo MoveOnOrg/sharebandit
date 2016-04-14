@@ -1,13 +1,13 @@
 var _ = require('lodash');
 var url = require('url');
 
-var init = function(app, schema, sequelize, adminauth, config) {
+var init = function(app, schema, sequelize, adminauth, config, moduleLinks) {
 
 app.get('/admin/',
   adminauth,
   function (req, res) {
     var query = url.parse(req.url, true).query;
-    var params = {};
+    var params = {'modules':moduleLinks};
     var protocolRegex =  /^([^:]+:\/\/)/;
     if (query.q) {
       sequelize

@@ -11,6 +11,7 @@
     "dialect": "sqlite",
     "storage": "sharebandit.sqlite"
   },
+  "extensionModules": ["supershare"],
   "oauth": {
     "clientId": "",
     "clientSecret": ""
