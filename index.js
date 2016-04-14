@@ -73,7 +73,7 @@ var boot = function(config) {
   // get the links that will be available in the admin
   //  -- all other views, the module should setup itself
   var moduleLinks = modules.map(function(m) {
-      var moduleResult = m(app, schema, sequelize, adminauth);
+      var moduleResult = m(app, schema, sequelize, adminauth, config);
       view_dirs.push(moduleResult.viewDirectory);
       return moduleResult.link;
   });
