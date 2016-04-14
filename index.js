@@ -33,7 +33,6 @@ var boot = function(config) {
   app.use(bodyParser.urlencoded({ extended: true }));
   app.engine('html', swig.renderFile);
   app.set('view engine', 'html');
-  app.set('views', __dirname + '/views');
 
   var modules = [];
 
@@ -67,13 +66,17 @@ var boot = function(config) {
                              'whitelist': config.oauthAllowedUsers
                             }).confirm);
   }
-
+  var view_dirs = [__dirname + '/views'];
   //MODULES
   // get the links that will be available in the admin
   //  -- all other views, the module should setup itself
   var moduleLinks = modules.map(function(m) {
-      return m(app, schema, sequelize, adminauth);
+      var moduleResult = m(app, schema, sequelize, adminauth);
+      view_dirs.push(moduleResult.viewDirectory);
+      return moduleResult.link;
   });
+
+  app.set('views', view_dirs);
 
   sequelize.authenticate();
   sequelize.sync();
