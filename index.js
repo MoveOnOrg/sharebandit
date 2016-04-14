@@ -75,6 +75,9 @@ var boot = function(config) {
       return m(app, schema, sequelize, adminauth);
   });
 
+  sequelize.authenticate();
+  sequelize.sync();
+
   var admin_views = require('./admin.js')(app, schema, sequelize, adminauth, moduleLinks);
 
 
