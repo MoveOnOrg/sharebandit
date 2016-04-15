@@ -1,5 +1,7 @@
 var url = require('url');
 var bandit = require('./bandit.js');
+var Promise = require("bluebird");
+var Sequelize = require('sequelize');
 
 var init = function(app, schema, sequelize, config) {
 
@@ -50,6 +52,7 @@ var init = function(app, schema, sequelize, config) {
               schema.Metadata.findOne({
                 'where': { 'url':murl.replace(/.fb\d+/,''), 'id':parseInt(req.params.abver)}
               }).then(function(trial) {
+                //maybe this part should go down by 'function failure'?
                 if (!trial) {
                   if (/testshare/.test(pathname)) {
                     res.render('shareheaders', {
@@ -61,49 +64,93 @@ var init = function(app, schema, sequelize, config) {
                     return res.status(404).send("Not found");
                   }
                 } else {
-                  console.log('FACEBOOK furl', furl);
-                  console.log('FACEBOOK orig', req.originalUrl);
-                  
-                  res.render('shareheaders', {
-                    'extraProperties': domainInfo.extraProperties || [],
-                    'title': trial.headline,
-                    'description': trial.text,
-                    'image': trial.image_url,
-                    'fullUrl': config.baseUrl + req.originalUrl
-                  });
+                  console.log('FACEBOOK', req.originalUrl, furl);
+                  var renderFacebook = function() {
+                    res.render('shareheaders', {
+                      'extraProperties': domainInfo.extraProperties || [],
+                      'title': trial.headline,
+                      'description': trial.text,
+                      'image': trial.image_url,
+                      'fullUrl': config.baseUrl + req.originalUrl
+                    });
+                  };
+                  if (!req.params.abver) {
+                    renderFacebook();
+                  }
                   //UPSERT the sharer if abid is present:
                   if (req.query.abid) {
                     var newsharer = {'key': req.query.abid,
                                      'trial': (parseInt(req.params.abver) || 0)
                                     };
-                    schema.Sharer.findOrCreate({'where': newsharer}).spread(function(sharer, created) {
-                      if (created) {
-                        schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}}).then(function(metadata) {
-                          metadata.increment('trial_count');
-                        });
+                    sequelize.transaction(function(t) {
+                      //ideally, we'd pass a Promise.all and serialize this, for easier readability, if nothing else
+                      // but that really f---s with the transaction, so better to do callback hell here
+                      return new Promise(function (resolve, reject) {
+                        schema.Sharer.findOrCreate({'where': newsharer}).spread(function(sharer, created) {
+                          if (created) {
+                            schema.Metadata.findById(parseInt(req.params.abver) || 0).then(function(metadata) {
+                              metadata.increment('trial_count').then(resolve, reject);
+                            });
+                          }
+                        })
+                      });
+                    }).then(function() {
+                      if (req.params.abver) {
+                        renderFacebook();
                       }
-                    })
+                    });
+                  } else {
+                    if (req.params.abver) {
+                      renderFacebook();
+                    }
                   }
                 }
               });
             /// 2. Am I a User?
             } else {
-              res.redirect(furl);
+              if (!req.query.absync) {
+                res.redirect(furl);
+              }
               //ASSUMING:
               //  on a share click, we INSERT a sharer with the key
               //  on creation of a trial (metadata row), we create a sharer with key=''
               //We might want to consider auto-adding the row, AND/OR verifying that the url is correct
               // e.g. with AND trial=(SELECT id FROM metadata WHERE url=$$trialurl) -- but that would slow it down
               if (req.params.abver) {
-                schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''), 'trial': (parseInt(req.params.abver) || 0)}})
-                  .spread(function(sharer, created) {
-                    sharer.increment('success_count');
-                  });
-                schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}}).then(function(metadata) {
-                  metadata.increment('success_count');
-                });
-                schema.Bandit.create({
-                  'trial': (parseInt(req.params.abver) || 0),
+                var cautious_id = (parseInt(req.params.abver) || 0);
+                schema.Metadata.findById(cautious_id).then(function(metadata) {
+                  if (metadata) {
+                    sequelize.transaction(/*{
+                                            deferrable: Sequelize.Deferrable.SET_IMMEDIATE,
+                                            isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+                                            },*/
+                                          function(t) {
+                      //ideally, we'd pass a Promise.all and serialize this, for easier readability, if nothing else
+                      // but that really f---s with the transaction, so better to do callback hell here
+                      return new Promise(function (resolve, reject) {
+                        //1.
+                        metadata.increment('success_count', {transaction: t}).then(function() {
+                          //2.
+                          schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''),
+                                                             'trial': cautious_id},
+                                                      transaction: t
+                                                     })
+                            .spread(function(sharer, created) {
+                              //3.
+                              sharer.increment('success_count', {transaction: t}).then(
+                                function() {
+                                  //4.
+                                  schema.Bandit.create({'trial': cautious_id }, {transaction: t}).then(resolve, reject);
+                                }, reject);
+                            })
+                        }, reject)
+                      });
+                    }).then(function() {
+                      if (req.query.absync) {
+                        res.redirect(furl);
+                      }
+                    });
+                  }
                 });
               }
             }
@@ -119,14 +166,31 @@ var init = function(app, schema, sequelize, config) {
   app.get('/a/:abver/:domain*',
           function (req, res) {
             res.set('Content-Type', 'image/gif');
-            res.end(smallgif, 'binary');
+            if (!req.query.absync) {
+              res.end(smallgif, 'binary');
+            }
             if (req.params.abver) {
-              schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''), 'trial': (parseInt(req.params.abver) || 0)}})
-                .spread(function(sharer, created) {
-                  sharer.increment('action_count');
-                });
-              schema.Metadata.findOne({where:{'id': (parseInt(req.params.abver) || 0)}}).then(function(metadata) {
-                metadata.increment('action_count');
+              sequelize.transaction(/*{
+                                      deferrable: Sequelize.Deferrable.SET_IMMEDIATE,
+                                      isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+                                      },*/ function(t) {
+                //ideally, we'd pass a Promise.all and serialize this, for easier readability, if nothing else
+                // but that really f---s with the transaction, so better to do callback hell here
+                return new Promise(function(resolve, reject) {
+                  schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''),
+                                                     'trial': (parseInt(req.params.abver) || 0)}})
+                    .spread(function(sharer, created) {
+                      sharer.increment('action_count').then(function() {
+                        schema.Metadata.findById(parseInt(req.params.abver) || 0).then(function(metadata) {
+                          metadata.increment('action_count').then(resolve, reject);
+                        });
+                      }, reject);
+                    });
+                })
+              }).then(function() {
+                if (req.query.absync) {
+                  res.end(smallgif, 'binary');
+                }
               });
             }
           }

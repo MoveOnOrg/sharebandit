@@ -1,7 +1,7 @@
 var app = require('../index');
 
 var request = require('request');
-
+var Promise = require("bluebird");
 var expect = require('expect.js');
 
 //Things to test
@@ -29,7 +29,7 @@ describe('server', function() {
     app.boot({
       "db": {"dialect": "sqlite",
              "storage": "testdb.sqlite",
-             //THIS COULD BE USEFUL TO CHANGE if you are debugging some tests
+             //THIS IS VERY USEFUL TO CHANGE if you are debugging some tests
              "logging": false
             },
       "develMode": true,
@@ -64,8 +64,7 @@ describe('server', function() {
   var URL_AB_NOHTTP = URL_AB.substring(7);
   var TRIAL_JS_URL = baseUrl + '/js/' + URL_AB_NOHTTP; //encodeURIComponent(URL_AB_NOHTTP);
   var TRIAL_REDIRECT_URLS = [];
-
-  console.log('URL_AB_NOHTTP', URL_AB_NOHTTP);
+  var SHARER_ABIDS = [123, 456]
   var TRIALS = [];
 
   //2. admin
@@ -146,7 +145,7 @@ describe('server', function() {
     });
   });
 
-  describe('redirect-url', function() {
+  describe('success events: redirects,actions', function() {
     it('should 404 on bad domain/url', function(done) {
       request.get(baseUrl + '/r/200/evilsomethingelse.com/foo', function(err, response, body) {
         expect(response.statusCode).to.equal(404);
@@ -154,12 +153,25 @@ describe('server', function() {
       })
     });
 
+    it('facebook should 302 on random url for facebook', function(done) {
+      request.get({
+        'url': baseUrl + '/r/0/'+URL_AB_NOHTTP+'/NO_testshare_URL_HERE?abid=1',
+        'followRedirect': false,
+        'headers': {
+          'User-Agent': "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+        }
+      }, function(err, response, body) {
+        expect(response.statusCode).to.equal(302);
+        done();
+      })
+    });
+
     it('should load facebook with facebook client', function(done) {
       TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
-        return (baseUrl + '/r/' + i + '/' + URL_AB_NOHTTP);
+        return (baseUrl + '/r/' + i + '/' + URL_AB_NOHTTP + '?absync=true');
       });
       request.get({
-        'url': TRIAL_REDIRECT_URLS[0],
+        'url': TRIAL_REDIRECT_URLS[0] + '&abid=' + SHARER_ABIDS[0],
         'headers': {
           'User-Agent': "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
         }}, function(err, response, body) {
@@ -183,19 +195,38 @@ describe('server', function() {
         })
     });
 
+    it('action request should return image', function(done) {
+      TRIAL_ACTION_URLS = TRIALS.map(function(i) {
+        return (baseUrl + '/a/' + i + '/' + URL_AB_NOHTTP);
+      });
+      request.get(TRIAL_ACTION_URLS[0]  + '?absync=true&abid=' + SHARER_ABIDS[1],
+                  function(err, response, body) {
+                    expect(response.headers['content-type']).to.equal('image/gif');
+                    done();
+                  });
+    });
+
     it('should redirect without facebook client', function(done) {
       TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
         return (baseUrl + '/r/' + i + '/' + URL_AB_NOHTTP);
       });
+      var middlePart = '?absync=true&abid=';
       request.get({
-        'url': TRIAL_REDIRECT_URLS[0],
+        'url': TRIAL_REDIRECT_URLS[0]  + middlePart + SHARER_ABIDS[1],
         'followRedirect': false
       }, function(err, response, body) {
         expect(response.statusCode).to.equal(302);
-        expect(response.headers.location).to.equal(URL_AB);
-        done();
+        expect(response.headers.location).to.equal(URL_AB + middlePart + SHARER_ABIDS[1]);
+        app.db.schema.Bandit.findAll().then(function(bandit_logs) {
+          app.db.schema.Metadata.findById(TRIALS[0])
+            .then(function(meta) {
+              expect(meta.success_count).to.equal(1);
+              done();
+            });
+        });
       })
     });
   });
+
   after(app.shutdown);
 });
