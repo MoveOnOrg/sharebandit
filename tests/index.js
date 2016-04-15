@@ -1,8 +1,25 @@
 var app = require('../index');
 
 var request = require('request');
-
+var Promise = require("bluebird");
 var expect = require('expect.js');
+
+//Things to test
+//  create two versions of a url, with img, title
+//    request JS for url 20 times, and confirm that it returns more than one
+//    request /r/ as facebook client and confirm og tags
+//    request /r/ for each variation as regular client and confirm redirect
+//    request /r/ for a bad domain and confirm 404
+//    request JS 100 times and count which variation each time
+//      request /r/ 100 times for the first variation (and none for the other)
+//         request JS another 100 times, and confirm that first variation is higher percentage
+//    look at sql directly and confirm that db reflects request history
+
+// other things to test some day:
+//   proto:https and other domain_whitelist properties
+//   more accurate bayesian report
+//   actions, once we wire that up?
+//   redirect of admin when not in develMode for security
 
 describe('server', function() {
   var port = 30000 + parseInt(Math.random());
@@ -11,7 +28,9 @@ describe('server', function() {
   before(function() {
     app.boot({
       "db": {"dialect": "sqlite",
-             "storage": "testdb.sqlite"
+             "storage": "testdb.sqlite",
+             //THIS IS VERY USEFUL TO CHANGE if you are debugging some tests
+             "logging": false
             },
       "develMode": true,
       "baseUrl": baseUrl,
@@ -26,21 +45,245 @@ describe('server', function() {
                        }
       }
     });
+    app.db.schema.Sharer.destroy({truncate:true});
+    app.db.schema.Bandit.destroy({truncate:true});
+    app.db.schema.Metadata.destroy({truncate:true});
   });
   //1. test homepage
   describe('homepage', function() {
     //test1 of hompage
     it('should respond to GET', function(done) {
-      request.get(baseUrl)
-        .on('response', function(response) {
+      request.get(baseUrl).on('response', function(response) {
           expect(response.statusCode).to.equal(200);
           done();
         })
     });
-
-    //test2 of homepage
   });
+
+  var URL_AB = "http://example.com/a";
+  var URL_AB_NOHTTP = URL_AB.substring(7);
+  var TRIAL_JS_URL = baseUrl + '/js/' + URL_AB_NOHTTP; //encodeURIComponent(URL_AB_NOHTTP);
+  var TRIAL_REDIRECT_URLS = [];
+  var SHARER_ABIDS = [123, 456]
+  var TRIALS = [];
+
+  //2. admin
+  describe('admin', function() {
+    //2.1 post to admin for new
+    it('should save a new by POST', function(done) {
+      request.post(baseUrl+'/admin/add/',
+                   {form:{
+                     'url': URL_AB,
+                     'id[new]': "new",
+                     'version[new]': "",
+                     'headline[new]': "fooHeadline1",
+                     'text[new]': "fooText1",
+                     'image_url[new]': "http://example.com/image1111.jpg"
+                   }}).on('response', function(response) {
+                     expect(response.statusCode).to.equal(302);
+                     app.db.schema.Metadata.findAll(
+                       {'where': {'url': URL_AB_NOHTTP}}
+                     ).then(function(trials) {
+                       //console.log('XXXX', trials);
+                       expect(Boolean(trials)).to.equal(true);
+                       var trial1 = trials[0].id;
+                       var form = {
+                           'url': URL_AB,
+                           'id[new]': "new",
+                           'version[new]': "",
+                           'headline[new]': "barHeadline2222",
+                           'text[new]': "barText2222",
+                           'image_url[new]': "" //no image for second option
+                       };
+                       form['id['+trial1+']'] = trial1;
+                       form['version['+trial1+']'] = trials[0].version;
+                       form['headline['+trial1+']'] = "fooHeadline1 SecondSave"; //DIFFERENT
+                       form['text['+trial1+']'] = "fooText1";
+                       form['image_url['+trial1+']'] = "http://example.com/image1111.jpg";
+
+                       request.post(
+                         baseUrl+'/admin/add/',
+                         {form: form}).on('response', function(response) {
+                           expect(response.statusCode).to.equal(302);
+                           app.db.schema.Metadata.findAll(
+                             {'where': {'url': URL_AB_NOHTTP}}
+                           ).then(function(trials) {
+                             //console.log('YYYYYYY', trials);
+                             expect(trials.length).to.equal(2);
+                             TRIALS.push(trials[0].id);
+                             TRIALS.push(trials[1].id);
+                             //console.log('ZZZZZZ', TRIALS);
+                             done();
+                           });
+                         });
+                     });
+                   })
+    });
+  });
+  describe('js-load', function() {
+    //3.1 get JS and see diversity of content
+    var ITER_TIMES = 20;
+
+    it('should load JS', function(done) {
+      var jsResponses = [];
+      var firstLineRegex = new RegExp('^//'+baseUrl+'/r/(\\d+)/');
+      var timesEach = [0,0];
+      //count a bunch of requests, and make sure we get some back from each trial version
+      for (var i=0; i<ITER_TIMES; i++) {
+        request.get(TRIAL_JS_URL, function(err, response, body) {
+          expect(response.statusCode).to.equal(200);
+          var parsedUrl = body.match(firstLineRegex);
+          ++(timesEach[TRIALS.indexOf(parseInt(parsedUrl[1]))]);
+          if ((timesEach[0]+timesEach[1]) >= ITER_TIMES) {
+            //there's actually a 1/2^20 that this will fail, but hey -- statistics
+            expect(timesEach[0] > 0).to.equal(true);
+            expect(timesEach[1] > 0).to.equal(true);
+            done();
+          }
+        });
+      }
+    });
+  });
+
+  describe('success events: redirects,actions', function() {
+    it('should 404 on bad domain/url', function(done) {
+      request.get(baseUrl + '/r/200/evilsomethingelse.com/foo', function(err, response, body) {
+        expect(response.statusCode).to.equal(404);
+        done();
+      })
+    });
+
+    it('facebook should 302 on random url for facebook', function(done) {
+      request.get({
+        'url': baseUrl + '/r/0/'+URL_AB_NOHTTP+'/NO_testshare_URL_HERE?abid=1',
+        'followRedirect': false,
+        'headers': {
+          'User-Agent': "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+        }
+      }, function(err, response, body) {
+        expect(response.statusCode).to.equal(302);
+        done();
+      })
+    });
+
+    it('should load facebook with facebook client', function(done) {
+      TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
+        return (baseUrl + '/r/' + i + '/' + URL_AB_NOHTTP + '?absync=true');
+      });
+      request.get({
+        'url': TRIAL_REDIRECT_URLS[0] + '&abid=' + SHARER_ABIDS[0],
+        'headers': {
+          'User-Agent': "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+        }}, function(err, response, body) {
+          expect(response.statusCode).to.equal(200);
+          expect(/property="og:title"\s*content="fooHeadline1 SecondSave"/.test(body)).to.equal(true);
+          expect(/property="og:description"\s*content="fooText1"/.test(body)).to.equal(true);
+          expect(/property="og:image"\s*content="http:\/\/example.com\/image1111.jpg"/.test(body)).to.equal(true);
+          //test config param
+          expect(/property="og:type"\s*content="cause"/.test(body)).to.equal(true);
+          request.get({
+            'url': TRIAL_REDIRECT_URLS[1],
+            'headers': {
+              'User-Agent': "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+            }}, function(err, response, body) {
+              expect(response.statusCode).to.equal(200);
+              expect(/property="og:title"\s*content="barHeadline2222"/.test(body)).to.equal(true);
+              expect(/property="og:description"\s*content="barText2222"/.test(body)).to.equal(true);
+              expect(/property="og:image"/.test(body)).to.equal(false);
+              done();
+            });
+        })
+    });
+
+    it('action request should return image', function(done) {
+      TRIAL_ACTION_URLS = TRIALS.map(function(i) {
+        return (baseUrl + '/a/' + i + '/' + URL_AB_NOHTTP);
+      });
+      request.get(TRIAL_ACTION_URLS[0]  + '?absync=true&abid=' + SHARER_ABIDS[1],
+                  function(err, response, body) {
+                    expect(response.headers['content-type']).to.equal('image/gif');
+                    done();
+                  });
+    });
+
+    it('should redirect without facebook client', function(done) {
+      TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
+        return (baseUrl + '/r/' + i + '/' + URL_AB_NOHTTP);
+      });
+      var middlePart = '?absync=true&abid=';
+      request.get({
+        'url': TRIAL_REDIRECT_URLS[0]  + middlePart + SHARER_ABIDS[1],
+        'followRedirect': false
+      }, function(err, response, body) {
+        expect(response.statusCode).to.equal(302);
+        expect(response.headers.location).to.equal(URL_AB + middlePart + SHARER_ABIDS[1]);
+        app.db.schema.Bandit.findAll().then(function(bandit_logs) {
+          app.db.schema.Metadata.findById(TRIALS[0])
+            .then(function(meta) {
+              expect(meta.success_count).to.equal(1);
+              done();
+            });
+        });
+      })
+    });
+
+  
+    var twentyAtATime = function(finalRun) {
+      // Basically this runs too slowly to be in 2000ms timeout, so we'll do it a bunch
+      //  of times to inflate the results
+      return function(done) {
+        var ITER_TIMES = 20;
+        var THRESHOLD = 0.80;
+        TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
+          return (baseUrl + '/r/' + i + '/' + URL_AB_NOHTTP);
+        });
+        var middlePart = '?absync=true&abid=';
+        var runRequest = function(after, i) {
+          return function () {
+            //console.log(i);
+            var trialChoice = ((Math.random() > THRESHOLD) ? 1 : 0);
+            console.log(trialChoice);
+            request.get({
+              'url': TRIAL_REDIRECT_URLS[trialChoice]  + middlePart + SHARER_ABIDS[1],
+              'followRedirect': false
+            }, after);
+          };
+        };
+        
+        var longChain = runRequest(function() {
+          if (finalRun) {
+            return finalRun(done);
+          } else {
+            done();
+          }
+        });
+        // hacky way to sequence runs -- SQLITE will suffer from locking issues
+        //   otherwise
+        for (var i=0; i<ITER_TIMES; i++) {
+          longChain = runRequest(longChain, i);
+        }
+        longChain();
+      }
+    };
+
+    it('20 requests should bias redirect results', twentyAtATime());
+    it('20 requests should bias redirect results', twentyAtATime());
+    it('20 requests should bias redirect results', twentyAtATime());
+    it('20 requests should bias redirect results', twentyAtATime());
+    it('20 requests should bias redirect results', twentyAtATime(
+      function(done) {
+          request.get(baseUrl + '/admin/datajson/' + TRIALS[0], function(err, response, body) {
+            console.log(body);
+            console.log(TRIALS);
+            request.get(baseUrl + '/admin/datajson/' + TRIALS[1], function(err, response, body) {
+              console.log(body);
+              done();
+            })
+          });
+        }
+    ));
+
+  });
+
   after(app.shutdown);
 });
-
-

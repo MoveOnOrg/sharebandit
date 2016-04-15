@@ -56,7 +56,6 @@ var boot = function(config) {
   var schema = require('./schema.js')(sequelize);
   dbconn.schema = schema;
 
-
   //VIEWS
   var public_views = require('./public.js')(app, schema, sequelize, config);
 
