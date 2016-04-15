@@ -42,6 +42,12 @@ var boot = function(config) {
     modules = config.extensionModules.map(function(m) {
       return require(m);
     });
+    modules.forEach(function(m) {
+      if (m.static) {
+        console.log(m.static);
+        app.use(express.static(m.static));
+      }
+    });
   }
 
   //MODELS
@@ -72,7 +78,7 @@ var boot = function(config) {
   // get the links that will be available in the admin
   //  -- all other views, the module should setup itself
   var moduleLinks = modules.map(function(m) {
-      var moduleResult = m(app, schema, sequelize, adminauth);
+      var moduleResult = m(app, schema, sequelize, adminauth, config);
       view_dirs.push(moduleResult.viewDirectory);
       return moduleResult.link;
   });

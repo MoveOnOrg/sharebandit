@@ -11,6 +11,10 @@
     "dialect": "sqlite",
     "storage": "sharebandit.sqlite"
   },
+  "segment": {
+    "key": "",
+    "domain": ""
+  },
   "extensionModules": ["supershare"],
   "oauth": {
     "clientId": "",
