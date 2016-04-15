@@ -28,8 +28,10 @@
             })
           );
       {% endfor %}
-      $.when.apply($,calls).then(function(multiresponse) {
-        var dataToGraph = multiresponse[0];
+      $.when.apply($,calls).done(function() {
+       // each call result is sent as arguments[i]
+       $(arguments).each(function(multiresponse) {
+        var dataToGraph = this[0];
         dataToGraph.forEach(function(row) {
           var create_row = []
           create_row[0] = new Date(row.time);
@@ -42,7 +44,8 @@
             }
           }
           data.addRow(create_row);
-      });
+        });
+       });
         new google.visualization.LineChart(document.getElementById('chart_div')).draw(data, {curveType: "function",
           width: 500, height: 400,
           vAxis: {maxValue: 10}}
