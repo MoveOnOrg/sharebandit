@@ -226,6 +226,63 @@ describe('server', function() {
         });
       })
     });
+
+  
+    var twentyAtATime = function(finalRun) {
+      // Basically this runs too slowly to be in 2000ms timeout, so we'll do it a bunch
+      //  of times to inflate the results
+      return function(done) {
+        var ITER_TIMES = 20;
+        var THRESHOLD = 0.80;
+        TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
+          return (baseUrl + '/r/' + i + '/' + URL_AB_NOHTTP);
+        });
+        var middlePart = '?absync=true&abid=';
+        var runRequest = function(after, i) {
+          return function () {
+            //console.log(i);
+            var trialChoice = ((Math.random() > THRESHOLD) ? 1 : 0);
+            console.log(trialChoice);
+            request.get({
+              'url': TRIAL_REDIRECT_URLS[trialChoice]  + middlePart + SHARER_ABIDS[1],
+              'followRedirect': false
+            }, after);
+          };
+        };
+        
+        var longChain = runRequest(function() {
+          if (finalRun) {
+            return finalRun(done);
+          } else {
+            done();
+          }
+        });
+        // hacky way to sequence runs -- SQLITE will suffer from locking issues
+        //   otherwise
+        for (var i=0; i<ITER_TIMES; i++) {
+          longChain = runRequest(longChain, i);
+        }
+        longChain();
+      }
+    };
+
+    it('20 requests should bias redirect results', twentyAtATime());
+    it('20 requests should bias redirect results', twentyAtATime());
+    it('20 requests should bias redirect results', twentyAtATime());
+    it('20 requests should bias redirect results', twentyAtATime());
+    it('20 requests should bias redirect results', twentyAtATime(
+      function(done) {
+          request.get(baseUrl + '/admin/datajson/' + TRIALS[0], function(err, response, body) {
+            console.log(body);
+            console.log(TRIALS);
+            request.get(baseUrl + '/admin/datajson/' + TRIALS[1], function(err, response, body) {
+              console.log(body);
+              done();
+            })
+          });
+        }
+    ));
+
   });
 
   after(app.shutdown);

@@ -128,6 +128,10 @@ var init = function(app, schema, sequelize, config) {
                       //ideally, we'd pass a Promise.all and serialize this, for easier readability, if nothing else
                       // but that really f---s with the transaction, so better to do callback hell here
                       return new Promise(function (resolve, reject) {
+                        var rejlog = function() {
+                          //console.log('rejected!');
+                          reject();
+                        };
                         //1.
                         metadata.increment('success_count', {transaction: t}).then(function() {
                           //2.
@@ -140,15 +144,18 @@ var init = function(app, schema, sequelize, config) {
                               sharer.increment('success_count', {transaction: t}).then(
                                 function() {
                                   //4.
-                                  schema.Bandit.create({'trial': cautious_id }, {transaction: t}).then(resolve, reject);
-                                }, reject);
+                                  schema.Bandit.create({'trial': cautious_id }, {transaction: t}).then(resolve, rejlog);
+                                }, rejlog);
                             })
-                        }, reject)
+                        }, rejlog)
                       });
-                    }).then(function() {
+                    }).then(function(value) {
                       if (req.query.absync) {
                         res.redirect(furl);
                       }
+                    }, function(reason) {
+                      console.log('Failed save of transaction ' + req.originalUrl
+                                  + ' -- ' + reason);
                     });
                   }
                 });
@@ -192,9 +199,12 @@ var init = function(app, schema, sequelize, config) {
                   res.end(smallgif, 'binary');
                 }
               });
+            } else {
+              if (req.query.absync) {
+                res.end(smallgif, 'binary');
+              }
             }
-          }
-         );
+          });
   
   app.get('/js/:domain*',
           function (req, res) {
