@@ -120,29 +120,38 @@ describe('server', function() {
                    })
     });
   });
-  describe('js-load', function() {
-    //3.1 get JS and see diversity of content
-    var ITER_TIMES = 20;
 
-    it('should load JS', function(done) {
+  var testJsBanditResponse = function(iterTimes, testFunc) {
+    return function(done) {
       var jsResponses = [];
       var firstLineRegex = new RegExp('^//'+baseUrl+'/r/(\\d+)/');
       var timesEach = [0,0];
       //count a bunch of requests, and make sure we get some back from each trial version
-      for (var i=0; i<ITER_TIMES; i++) {
+      for (var i=0; i<iterTimes; i++) {
         request.get(TRIAL_JS_URL, function(err, response, body) {
           expect(response.statusCode).to.equal(200);
           var parsedUrl = body.match(firstLineRegex);
           ++(timesEach[TRIALS.indexOf(parseInt(parsedUrl[1]))]);
-          if ((timesEach[0]+timesEach[1]) >= ITER_TIMES) {
-            //there's actually a 1/2^20 that this will fail, but hey -- statistics
-            expect(timesEach[0] > 0).to.equal(true);
-            expect(timesEach[1] > 0).to.equal(true);
+          if ((timesEach[0]+timesEach[1]) >= iterTimes) {
+            expect(testFunc(timesEach)).to.equal(true);
             done();
           }
         });
       }
-    });
+    };
+  };
+
+  describe('js-load', function() {
+    //3.1 get JS and see diversity of content
+    var ITER_TIMES = 20;
+
+    it('should load JS', testJsBanditResponse(
+      ITER_TIMES, function(timesEach) {
+        //there's actually a 1/2^20 that this will fail, but hey -- statistics
+        expect(timesEach[0] > 0).to.equal(true);
+        expect(timesEach[1] > 0).to.equal(true);
+        return true;
+      }));
   });
 
   describe('success events: redirects,actions', function() {
@@ -242,7 +251,7 @@ describe('server', function() {
             //console.log(i);
             var trialChoice = ((Math.random() > threshold) ? 1 : 0);
             request.get({
-              'url': TRIAL_REDIRECT_URLS[trialChoice]  + middlePart + SHARER_ABIDS[1],
+              'url': TRIAL_REDIRECT_URLS[trialChoice]  + middlePart + parseInt(10000*Math.random()),
               'followRedirect': false
             }, after);
           };
@@ -278,6 +287,12 @@ describe('server', function() {
           });
         }
     ));
+
+    it('should now be weighted with bandit', testJsBanditResponse(20, function(timesEach) {
+      console.log('inbalance after 0.8 preference', timesEach);
+      expect(timesEach[0] > timesEach[1]).to.equal(true);
+      return true;
+    }))
 
   });
 
