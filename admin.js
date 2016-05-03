@@ -167,7 +167,8 @@ app.get('/admin/datajson/*',
     var data = {bandits: []}
     schema.Bandit.findAll({
       where: {
-        trial: req.params[0]
+        trial: req.params[0],
+        action: false //TODO: need to make this contingent and have the view show both?
       }
     }).then(function(results) {
       var index = 0;
