@@ -229,7 +229,7 @@ describe('server', function() {
         'followRedirect': false
       }, function(err, response, body) {
         expect(response.statusCode).to.equal(302);
-        expect(response.headers.location).to.equal(URL_AB + middlePart + SHARER_ABIDS[1]);
+        expect(response.headers.location).to.contain(URL_AB + middlePart + SHARER_ABIDS[1]);
         app.db.schema.Bandit.findAll().then(function(bandit_logs) {
           app.db.schema.Metadata.findById(TRIALS[0])
             .then(function(meta) {

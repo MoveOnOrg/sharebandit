@@ -1,4 +1,5 @@
 var url = require('url');
+var _ = require('lodash');
 var bandit = require('./bandit.js');
 var Promise = require("bluebird");
 var Sequelize = require('sequelize');
@@ -32,11 +33,14 @@ var init = function(app, schema, sequelize, config) {
             var domainInfo = config.domain_whitelist[req.params.domain];
             var pathname = req.params[0];
             var proto = domainInfo.proto;
+            var forwardedQuery = _.clone(req.query);
+            forwardedQuery.abver = req.params.abver;
+
             var furl = url.format({
               'protocol': proto,
               'host': req.params.domain,
               'pathname': decodeURIComponent(pathname),
-              'query': req.query
+              'query': forwardedQuery
             });
             
             /// 1. Am I Facebook Crawler?
