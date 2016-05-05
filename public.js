@@ -1,4 +1,5 @@
 var url = require('url');
+var _ = require('lodash');
 var bandit = require('./bandit.js');
 var Promise = require("bluebird");
 var Sequelize = require('sequelize');
@@ -32,11 +33,14 @@ var init = function(app, schema, sequelize, config) {
             var domainInfo = config.domain_whitelist[req.params.domain];
             var pathname = req.params[0];
             var proto = domainInfo.proto;
+            var forwardedQuery = _.clone(req.query);
+            forwardedQuery.abver = req.params.abver;
+
             var furl = url.format({
               'protocol': proto,
               'host': req.params.domain,
               'pathname': decodeURIComponent(pathname),
-              'query': req.query
+              'query': forwardedQuery
             });
             
             /// 1. Am I Facebook Crawler?
@@ -144,7 +148,8 @@ var init = function(app, schema, sequelize, config) {
                               sharer.increment('success_count', {transaction: t}).then(
                                 function() {
                                   //4.
-                                  schema.Bandit.create({'trial': cautious_id }, {transaction: t}).then(resolve, rejlog);
+                                  schema.Bandit.create({'trial': cautious_id,
+                                                        'action': false}, {transaction: t}).then(resolve, rejlog);
                                 }, rejlog);
                             })
                         }, rejlog)
@@ -170,6 +175,7 @@ var init = function(app, schema, sequelize, config) {
   var smallgif = [71,73,70,56,57,97,1,0,1,0,0,255,0,44,0,0,0,0,1,0,1,0,0,2,0,59].map(function(x){return String.fromCharCode(x);}).join('');
   //transparent version
   //smallgif = [71,73,70,56,57,97,1,0,1,0,0,0,0,33,249,4,1,10,0,1,0,44,0,0,0,0,1,0,1,0,0,2,2,76,1,0,59].map(function(x){return String.fromCharCode(x);}).join('');
+  //TODO: abstract out the similarities with this code and the /r/ code above (even though above, there are more paths)
   app.get('/a/:abver/:domain*',
           function (req, res) {
             res.set('Content-Type', 'image/gif');
@@ -184,14 +190,28 @@ var init = function(app, schema, sequelize, config) {
                 //ideally, we'd pass a Promise.all and serialize this, for easier readability, if nothing else
                 // but that really f---s with the transaction, so better to do callback hell here
                 return new Promise(function(resolve, reject) {
+                  var rejlog = function() {
+                    //console.log('rejected!');
+                    reject();
+                  };
+                  var cautious_id = (parseInt(req.params.abver) || 0);
+                  //action 1.
                   schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''),
-                                                     'trial': (parseInt(req.params.abver) || 0)}})
+                                                     'trial': cautious_id},
+                                              transaction: t
+                                             })
                     .spread(function(sharer, created) {
-                      sharer.increment('action_count').then(function() {
-                        schema.Metadata.findById(parseInt(req.params.abver) || 0).then(function(metadata) {
-                          metadata.increment('action_count').then(resolve, reject);
+                      //action 2.
+                      sharer.increment('action_count', {transaction: t}).then(function() {
+                        schema.Metadata.findById(cautious_id, {transaction: t}).then(function(metadata) {
+                          //action 3.
+                          metadata.increment('action_count', {transaction: t}).then(
+                                function() {
+                                  //action 4.
+                                  schema.Bandit.create({'trial':cautious_id, 'action':true}, {transaction: t}).then(resolve, rejlog);
+                                }, rejlog);
                         });
-                      }, reject);
+                      }, rejlog);
                     });
                 })
               }).then(function() {
@@ -205,22 +225,24 @@ var init = function(app, schema, sequelize, config) {
               }
             }
           });
-  
-  app.get('/js/:domain*',
-          function (req, res) {
-            if (! (req.params.domain in config.domain_whitelist)) {
-              return res.status(404).send("Not found");
-            }
-            var proto = config.domain_whitelist[req.params.domain].proto;
-            var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
-            res.set('Content-Type', 'text/javascript');
+  var js_result = function(successMetric) {
+    return function (req, res) {
+      if (! (req.params.domain in config.domain_whitelist)) {
+        return res.status(404).send("Not found");
+      }
+      var proto = config.domain_whitelist[req.params.domain].proto;
+      var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
+      res.set('Content-Type', 'text/javascript');
+      
+      bandit(murl, sequelize, successMetric).then(function(trialChoice) {
+        var burl = app._shareUrl('', trialChoice);
+        return res.render('jsshare', {baseUrl: burl, abver: trialChoice});
+      });
+    };
+  };
 
-            bandit(murl, sequelize).then(function(trialChoice) {
-              var burl = app._shareUrl('', trialChoice);
-              return res.render('jsshare', {baseUrl: burl, abver: trialChoice});
-            });
-          }
-         );
+  app.get('/js/:domain*', js_result('success'));
+  app.get('/jsaction/:domain*', js_result('action'));
   
 }
 

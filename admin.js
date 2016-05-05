@@ -161,13 +161,13 @@ app.post('/admin/delete/*',
 	}
 );
 
-app.get('/admin/datajson/*',
-  adminauth,
-  function (req, res) {
+var jsonQuery = function(isAction) {
+  return function (req, res) {
     var data = {bandits: []}
     schema.Bandit.findAll({
       where: {
-        trial: req.params[0]
+        trial: req.params[0],
+        action: isAction
       }
     }).then(function(results) {
       var index = 0;
@@ -179,7 +179,11 @@ app.get('/admin/datajson/*',
       res.setHeader('Content-Type', 'application/json');
       res.send(JSON.stringify(data.bandits));
     });
-  });
+  };
+}
+
+app.get('/admin/datajson/*', adminauth, jsonQuery(false));
+app.get('/admin/actionjson/*', adminauth, jsonQuery(true));
 
 app.get('/admin/report/*',
   adminauth,

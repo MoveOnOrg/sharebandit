@@ -45,9 +45,13 @@ describe('server', function() {
                        }
       }
     });
-    app.db.schema.Sharer.destroy({truncate:true});
-    app.db.schema.Bandit.destroy({truncate:true});
-    app.db.schema.Metadata.destroy({truncate:true});
+    try {
+      app.db.schema.Sharer.destroy({truncate:true});
+      app.db.schema.Bandit.destroy({truncate:true});
+      app.db.schema.Metadata.destroy({truncate:true});
+    } catch(e) {
+      //empty db, so proceed and will get created
+    }
   });
   //1. test homepage
   describe('homepage', function() {
@@ -225,7 +229,7 @@ describe('server', function() {
         'followRedirect': false
       }, function(err, response, body) {
         expect(response.statusCode).to.equal(302);
-        expect(response.headers.location).to.equal(URL_AB + middlePart + SHARER_ABIDS[1]);
+        expect(response.headers.location).to.contain(URL_AB + middlePart + SHARER_ABIDS[1]);
         app.db.schema.Bandit.findAll().then(function(bandit_logs) {
           app.db.schema.Metadata.findById(TRIALS[0])
             .then(function(meta) {
@@ -237,13 +241,14 @@ describe('server', function() {
     });
 
   
-    var twentyAtATime = function(threshold, finalRun) {
+    var twentyAtATime = function(threshold, finalRun, action) {
+      action = action || '/r/';
       // Basically this runs too slowly to be in 2000ms timeout, so we'll do it a bunch
       //  of times to inflate the results
       return function(done) {
         var ITER_TIMES = 20;
         TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
-          return (baseUrl + '/r/' + i + '/' + URL_AB_NOHTTP);
+          return (baseUrl + action + i + '/' + URL_AB_NOHTTP);
         });
         var middlePart = '?absync=true&abid=';
         var runRequest = function(after, i) {
@@ -274,6 +279,8 @@ describe('server', function() {
     };
 
     it('20 requests should bias redirect results', twentyAtATime(0.8));
+    it('20 action requests will not bias results', twentyAtATime(0.1, false, '/a/'));
+    it('20 action requests will not bias results', twentyAtATime(0.1, false, '/a/'));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));

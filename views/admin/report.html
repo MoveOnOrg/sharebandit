@@ -5,9 +5,12 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
 <script type="text/javascript">
     google.charts.load('current', {'packages':['corechart']});
-    google.charts.setOnLoadCallback(drawChart);
+    google.charts.setOnLoadCallback(function() {
+         drawChart('chart_div_actions', 'actionjson');
+         drawChart('chart_div', 'datajson');
+    });
 
-    function drawChart(dataToGraph) {
+    function drawChart(targetElement, dataType) {
       var data = new google.visualization.DataTable();
       data.addColumn('datetime', 'Time');
 
@@ -23,7 +26,7 @@
       var calls = [];
       {% for i in variants %}
           calls.push(
-             jQuery.getJSON('/admin/datajson/{{i.id}}', function(new_data){
+             jQuery.getJSON('/admin/'+dataType+'/{{i.id}}', function(new_data){
               return new_data;
             })
           );
@@ -46,7 +49,7 @@
           data.addRow(create_row);
         });
        });
-        new google.visualization.LineChart(document.getElementById('chart_div')).draw(data, {curveType: "function",
+        new google.visualization.LineChart(document.getElementById(targetElement)).draw(data, {curveType: "function",
           width: 500, height: 400,
           vAxis: {maxValue: 10}}
       );
@@ -74,7 +77,11 @@
   <h3>Report for url {{variants[0].url }}</h3>
 </div>
 
-<!--Div that will hold the viz-->
+<!--Divs that will hold the viz-->
+<h4>Completed Actions Report</h4>
+<div id="chart_div_actions"></div>
+
+<h4>Successful Shares Report</h4>
 <div id="chart_div"></div>
 
 {% endblock %}

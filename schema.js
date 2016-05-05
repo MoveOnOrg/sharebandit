@@ -39,7 +39,8 @@ var init = function(sequelize) {
 
   var Bandit = sequelize.define('bandit', {
     trial: {type: Sequelize.INTEGER,
-        references: {model: Metadata, key: 'id'}},
+            references: {model: Metadata, key: 'id'}},
+    action: {type: Sequelize.BOOLEAN, defaultValue: false},
     time: {type: Sequelize.DATE, defaultValue: Sequelize.NOW}
   }, {
     indexes : [

@@ -1,7 +1,7 @@
 var PD = require("probability-distributions");
 var Promise = require("bluebird");
 
-var bayesBandit = function(url, sequelize) {
+var bayesBandit = function(url, sequelize, successMetric) {
   // returns a Promise which will resolve to a 'trial' choice for the url
 
   // algorithm summary
@@ -20,10 +20,13 @@ var bayesBandit = function(url, sequelize) {
   //      rbeta is basically doing some logarithmic/exponent stuff
   //      but really only about ~5 per rbeta call, so it'll be pretty fast
   
-  var query = ('SELECT trial, count(Sharers.success_count > 0) AS success, count(key) AS trials'
+  var query = ('SELECT trial, count(Sharers.{{success_field}}_count > 0) AS success, count(key) AS trials'
                  +' FROM Sharers'
                  +' JOIN Metadata on (Metadata.id = Sharers.trial)'
                  +' WHERE Metadata.url = ? GROUP BY trial')
+              .replace('{{success_field}}',
+                       ((successMetric == 'action') ? 'action' : 'success')
+                      );
 
   return new Promise(function(resolve, reject) {
       //TODO
