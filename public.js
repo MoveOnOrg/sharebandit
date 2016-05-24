@@ -179,6 +179,7 @@ var init = function(app, schema, sequelize, config) {
   app.get('/a/:abver/:domain*',
           function (req, res) {
             res.set('Content-Type', 'image/gif');
+            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
             if (!req.query.absync) {
               res.end(smallgif, 'binary');
             }
@@ -230,10 +231,11 @@ var init = function(app, schema, sequelize, config) {
       if (! (req.params.domain in config.domain_whitelist)) {
         return res.status(404).send("Not found");
       }
+      res.set('Content-Type', 'text/javascript');
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
       var proto = config.domain_whitelist[req.params.domain].proto;
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
-      res.set('Content-Type', 'text/javascript');
-      
       bandit(murl, sequelize, successMetric).then(function(trialChoice) {
         var burl = app._shareUrl('', trialChoice);
         return res.render('jsshare', {baseUrl: burl, abver: trialChoice});
