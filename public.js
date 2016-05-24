@@ -95,6 +95,8 @@ var init = function(app, schema, sequelize, config) {
                             schema.Metadata.findById(parseInt(req.params.abver) || 0).then(function(metadata) {
                               metadata.increment('trial_count').then(resolve, reject);
                             });
+                          } else {
+                            resolve();
                           }
                         })
                       });
