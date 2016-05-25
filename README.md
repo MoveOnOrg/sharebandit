@@ -86,7 +86,7 @@ This URL actually returns a <a href="http://probablyprogramming.com/2009/03/15/t
      super-duper small image file</a> so if you have a 'Thanks'/completion page, you can just include the
      HTML:
 
-   <img src="{{conversion url above}}" width="1" height="1" />
+   &lt;img src="{{conversion url above}}" width="1" height="1" />
 
 
 2. Instead of the <b>/js/</b> `script` element in the simple version, replace that URL with <b>/jsaction/</b>
