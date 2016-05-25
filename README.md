@@ -41,7 +41,7 @@ How to integrate ShareBandit with a website (programming required)
 2. For those pages:
 2.1 Make an og:url META tag in your HEAD element:
 
-    <meta name="og:url" value="http://{{YOUR_SHAREBANDIT_URL}}<b>/r/0/</b>{{URL_FOR_PAGE WITHOUT PROTOCOL}}" />
+    &lt;meta name="og:url" value="http://{{YOUR_SHAREBANDIT_URL}}<b>/r/0/</b>{{URL_FOR_PAGE WITHOUT PROTOCOL}}" />
 
 Example: If your sharebandit instance is at `https://share.example.com` and the URL for the page is
 `http://www.example.com/story/the-world-is-burning` Then the tag should be:
