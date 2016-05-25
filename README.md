@@ -39,7 +39,7 @@ When users share the page served by your CMS that has been instrumented by you t
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB6.png )
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB7.png )
 
-Here our system has been instrumented to share the link https://share.moveon.org/petitions.moveon.org/sign/sharebandit-test and sharebandit notices this request is coming from the facebook user agent, and redirects to a particular treatment, like https://share.moveon.org/r/8/petitions.moveon.org/sign/sharebandit-test
+Here our system has been instrumented to share the link https://share.moveon.org/petitions.moveon.org/sign/sharebandit-test and sharebandit takes this request and redirects to a particular treatment, like https://share.moveon.org/r/8/petitions.moveon.org/sign/sharebandit-test
 
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB9.png )
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB10.png )
@@ -53,12 +53,22 @@ Other users can then click on this link, are taken to our petition page, and if 
 
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB12.png )
 
-6. After the "success" callback has been made, you can navigate back to the sharebandit admin, and click View Report for a given treatment, and then see a graph of successes for various treatments over time. It will take hundreds of data points for these graphs to become meaningful, but they are intended to show the progress of the algorithm, and how long it took to converge on a winner.
+Here's an example of how we make this callback on petition signature:
+
+```javascript
+jQuery.getScript('https://share.moveon.org/jsaction/'
+                +MoveOnPetitionsData.fbURL
+                 .replace(/https?:\/\//,'')
+                 .replace(/\.fb\d+/,'')
+                );
+```
+
+After the "success" callback has been made, you can navigate back to the sharebandit admin, and click View Report for a given treatment, and then see a graph of successes for various treatments over time. It will take hundreds of data points for these graphs to become meaningful, but they are intended to show the progress of the algorithm, and how long it took to converge on a winner.
 
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB13.png )
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB14.png )
 
-7. To add data points in this example, you need to sign this same petition again (with a different email address, in our system) to get a potentially different share treatment (remember that this is chosen at random at first):
+To add data points in this example, you need to sign this same petition again (with a different email address, in our system) to get a potentially different share treatment (remember that this is chosen at random at first):
 
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB15.png )
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB16.png ) 
