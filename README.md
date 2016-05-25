@@ -41,20 +41,20 @@ How to integrate ShareBandit with a website (programming required)
 2. For those pages:
 2.1 Make an og:url META tag in your HEAD element:
 
-    &lt;meta name="og:url" value="http://{{YOUR_SHAREBANDIT_URL}}<b>/r/0/</b>{{URL_FOR_PAGE WITHOUT PROTOCOL}}" />
+    <meta name="og:url" value="http://{{YOUR_SHAREBANDIT_URL}}<b>/r/0/</b>{{URL_FOR_PAGE WITHOUT PROTOCOL}}" />
 
 Example: If your sharebandit instance is at `https://share.example.com` and the URL for the page is
 `http://www.example.com/story/the-world-is-burning` Then the tag should be:
 
-    &lt;meta name="og:url" value="https://share.example.com/r/0/www.example.com/story/the-world-is-burning" />
+    <meta name="og:url" value="https://share.example.com/r/0/www.example.com/story/the-world-is-burning" />
 
 2.2 On any share links to your page, embed the javascript file
 
-    &lt;script src="{{YOUR_SHAREBANDIT_URL}}<b>/js/</b>{{URL_FOR_PAGE WITHOUT PROTOCOL}}" >&lt;/script>
+    <script src="{{YOUR_SHAREBANDIT_URL}}<b>/js/</b>{{URL_FOR_PAGE WITHOUT PROTOCOL}}" ></script>
 
 Example (same case as above):
 
-    &lt;script src="https://share.example.com/js/www.example.com/story/the-world-is-burning" ></script>
+    <script src="https://share.example.com/js/www.example.com/story/the-world-is-burning" ></script>
 
 2.3 On the same share links, add `class="sharebandit-fb"`
 
