@@ -14,6 +14,7 @@
     "istanbul": "^0.4.3",
     "mocha": "^2.4.5",
     "sqlite3": "^3.1.2",
+    "sequelize": "^3.19.3",
     "swig": "^1.4.2"
   },
   "dependencies": {

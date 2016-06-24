@@ -1,4 +1,9 @@
-var configFile = require('./config.json');
+if (process.env.CONFIG) {
+  var configFile = JSON.parse(process.env.CONFIG);
+} else {
+  var configFile = require('./config.json');
+}
+
 var _ = require('lodash');
 var express = require('express');
 var app = express();
@@ -20,6 +25,8 @@ var shutdown = function() {
 
 // Launch server.
 var boot = function(config) {
+  console.log(config);
+  console.log(configFile);
   if (!config) {
     config = configFile;
   }

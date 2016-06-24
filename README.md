@@ -141,22 +141,26 @@ This URL actually returns a <a href="http://probablyprogramming.com/2009/03/15/t
 How to setup:
 -------------
 
-0. Install nodejs
+1. `git clone https://github.com/MoveOnOrg/sharebandit.git`
 
-1. Config base template
+2. Install nodejs, maybe `sudo apt-get install node`
+
+3. In the root of the app run `npm install` to get and install all packages
+
+4. Config base template
    * `cp config.json.template config.json`
    * change "baseUrl" to e.g. "http://localhost:3000"
    * change "port" to e.g. 3000
    * add a secret string for "sessionSecret" key
 
-2. Setup the database with the "db" key in config.json:
+5. Setup the database with the "db" key in config.json:
    * Install sqlite3 and/or postgres libs and module installed on your computer (apt, brew, etc)
    * Do not use sqlite for production.
    * If you use sqlite, you need to run
       (NOT necessary for postgres)   
       npm install --dev
 
-3. Setup Auth
+6. Setup Auth
    * If you are doing development on domain localhost, 
      you can skip auth by adding `"develMode": true,` to your config.json
    * If you want to use google auth for the admin:
