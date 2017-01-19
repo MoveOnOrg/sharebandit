@@ -6,7 +6,7 @@ var init = function(sequelize) {
     id: {type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true}, //abver parameter
     url: Sequelize.STRING,
     headline: Sequelize.STRING,
-    text: Sequelize.STRING(1234),
+    text: Sequelize.TEXT,
     image_url: Sequelize.STRING,
     version: Sequelize.INTEGER,
     //how many users click the share link
