@@ -8,3 +8,5 @@ testdb.sqlite
 node_modules/**
 npm-debug.log
 /.env
+supershare
+node_modules
