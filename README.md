@@ -143,7 +143,7 @@ How to setup:
 
 1. `git clone https://github.com/MoveOnOrg/sharebandit.git`
 
-2. Install nodejs, maybe `sudo apt-get install node`
+2. Install node, on linux: `sudo apt-get install node` and on mac `brew install node` (or npm or nvm, whatever you prefer)
 
 3. In the root of the app run `npm install` to get and install all packages
 
@@ -159,8 +159,14 @@ How to setup:
    * If you use sqlite, you need to run
       (NOT necessary for postgres)   
       npm install --dev
+      npm install -g sequelize-cli
+   * If you use postgres, before you can run migrations, you'll need to:
+      create database sharebandit;
 
-6. Setup Auth
+6. Run database migrations
+   * sequelize db:migrate
+
+7. Setup Auth
    * If you are doing development on domain localhost, 
      you can skip auth by adding `"develMode": true,` to your config.json
    * If you want to use google auth for the admin:
@@ -178,10 +184,16 @@ How to setup:
           * You can also add "users": ["youremail@gmail.com", "yourfriend@gmail.com"]
           *  and/or "ip_addresses": ["127.0.0.1", "<whitelisted ip addresses>"]
 
-How to run (after installing nodejs):
+How to run (after installing node):
 -------------------------------------
 
-   `nodejs index.js`
+   `node index.js` 
+   # and then navigate to http://localhost:3000/ 
+
+How to run tests :
+-------------------------------------
+
+   `npm test`
 
 
 How to Install in Production
