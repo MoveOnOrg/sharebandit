@@ -1,7 +1,7 @@
 if (process.env.CONFIG) {
   var configFile = JSON.parse(process.env.CONFIG);
 } else {
-  var configFile = require('./config.json');
+  var configFile = require('./config/config.json');
 }
 
 var _ = require('lodash');
