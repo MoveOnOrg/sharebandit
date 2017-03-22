@@ -68,7 +68,7 @@ var init = function(app, schema, sequelize, config) {
                     return res.status(404).send("Not found");
                   }
                 } else {
-                  //console.log('FACEBOOK', req.originalUrl, furl);
+                  // console.log('FACEBOOK', req.originalUrl, furl);
                   var renderFacebook = function() {
                     res.render('shareheaders', {
                       'extraProperties': domainInfo.extraProperties || [],

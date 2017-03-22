@@ -13,15 +13,17 @@
     "express": "^4.13.4",
     "istanbul": "^0.4.3",
     "mocha": "^2.4.5",
-    "sequelize": "^3.19.3",
     "sqlite3": "^3.1.2",
+    "sequelize": "^3.19.3",
     "swig": "^1.4.2"
   },
   "dependencies": {
     "body-parser": "^1.15.0",
     "express-session": "^1.13.0",
+    "google-auth": "0.0.1",
     "googleapis": "^2.1.7",
     "jsdom": "^8.3.1",
+    "lodash": "^4.17.4",
     "pg": "^4.4.6",
     "probability-distributions": "^0.8.5",
     "sequelize": "^3.19.3"
