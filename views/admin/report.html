@@ -49,9 +49,16 @@
           data.addRow(create_row);
         });
        });
-        new google.visualization.LineChart(document.getElementById(targetElement)).draw(data, {curveType: "function",
+        new google.visualization.LineChart(document.getElementById(targetElement)).draw(data, {
+          curveType: "function",
           width: 500, height: 400,
-          vAxis: {maxValue: 1}}
+          vAxis: {maxValue: 1,
+                  viewWindow:{
+                    max:1,
+                    min:0
+                  }
+                 }
+        }
       );
         });
 
