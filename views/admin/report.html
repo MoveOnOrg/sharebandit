@@ -1,7 +1,7 @@
 {% extends '../page.html' %}
 
 {% block head %}
-<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script src="https://www.gstatic.com/charts/loader.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
 <script type="text/javascript">
     google.charts.load('current', {'packages':['corechart']});
@@ -17,7 +17,7 @@
       var num_variants = 0;
       var id_to_col = {};
       {% for i in variants %}
-      trial = "Version " + {{i.id}};
+      trial = "Trial {{i.id}} ({{i.headline}})";
       data.addColumn('number', trial);
       num_variants++;
       id_to_col.id_{{i.id}} = num_variants; 
@@ -41,7 +41,7 @@
           for (i=1; i <= num_variants; i++) {
             var key = 'id_' + row.trial
             if (i === id_to_col[key]) {
-              create_row[i] = row.successes;
+              create_row[i] = row.y;
             } else {
               create_row[i] = null;
             }
@@ -51,7 +51,7 @@
        });
         new google.visualization.LineChart(document.getElementById(targetElement)).draw(data, {curveType: "function",
           width: 500, height: 400,
-          vAxis: {maxValue: 10}}
+          vAxis: {maxValue: 1}}
       );
         });
 
@@ -78,10 +78,10 @@
 </div>
 
 <!--Divs that will hold the viz-->
-<h4>Completed Actions Report</h4>
+<h4>Likelihood of share => click Report</h4>
 <div id="chart_div_actions"></div>
 
-<h4>Successful Shares Report</h4>
+<h4>Likelihood of share => conversion Report</h4>
 <div id="chart_div"></div>
 
 {% endblock %}

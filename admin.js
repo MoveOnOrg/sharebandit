@@ -164,19 +164,25 @@ app.post('/admin/delete/*',
 );
 
 var jsonQuery = function(isAction) {
+  var actionkey = (isAction ? 'action_count' : 'success_count');
   return function (req, res) {
     var data = {bandits: []}
-    schema.Bandit.findAll({
+    schema.Sharer.findAll({
       where: {
-        trial: req.params[0],
-        action: isAction
+        trial: req.params[0]
       }
     }).then(function(results) {
-      var index = 0;
-      _.forEach (results, function(result) {
-        index++;
-        result.dataValues.successes = index;
-        data.bandits.push(result.dataValues);
+      var successes = 0;
+      _.forEach (results, function(result, index) {
+        var d = result.dataValues;
+        if (d[actionkey] > 0) {
+          ++successes;
+        }
+        data.bandits.push({
+          time: result.dataValues.createdAt,
+          trial: result.dataValues.trial,
+          y: successes/(index+1)
+        });
       });
       res.setHeader('Content-Type', 'application/json');
       res.send(JSON.stringify(data.bandits));
