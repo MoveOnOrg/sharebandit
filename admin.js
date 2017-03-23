@@ -9,24 +9,26 @@ app.get('/admin/',
     var query = url.parse(req.url, true).query;
     var params = {'modules':moduleLinks};
     var protocolRegex =  /^([^:]+:\/\/)/;
+    var sqlQ = {
+      offset: query.offset || 0,
+      limit:50,
+      order: 'id DESC',
+      attributes: [[sequelize.fn('DISTINCT', sequelize.col('url')), 'url']]
+    };
     if (query.q) {
-      sequelize
-        .query(
-          "SELECT DISTINCT url FROM metadata WHERE url LIKE ?",
-          {
-            replacements: ['%' + query.q.replace(protocolRegex, '') + '%'],
-            type: sequelize.QueryTypes.SELECT
-          }
-        )
-        .then(function(urls) {
-          params.results = urls;
-          res.render('admin/index', params);
-        });
+      sqlQ['where'] = {
+        "url": {
+          $like: '%' + query.q.replace(protocolRegex, '') + '%'
+        }
+      };
     }
-    else {
-      res.render('admin/index', params);
-    }
-	}
+    schema.Metadata.findAll(sqlQ)
+      .then(function(urls) {
+        params.results = urls;
+        res.render('admin/index', params);
+      });
+  }
+
 );
 
 addEditPost = function (req, res) {
