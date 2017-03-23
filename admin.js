@@ -11,9 +11,10 @@ app.get('/admin/',
     var protocolRegex =  /^([^:]+:\/\/)/;
     var sqlQ = {
       offset: query.offset || 0,
-      limit:50,
-      order: 'id DESC',
-      attributes: [[sequelize.fn('DISTINCT', sequelize.col('url')), 'url']]
+      limit: 50,
+      order: 'max(id) DESC',
+      attributes: ['url'],
+      group: ['url']
     };
     if (query.q) {
       sqlQ['where'] = {
