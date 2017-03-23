@@ -171,7 +171,8 @@ var jsonQuery = function(isAction) {
     schema.Sharer.findAll({
       where: {
         trial: req.params[0]
-      }
+      },
+      order: ['createdAt']
     }).then(function(results) {
       var successes = 0;
       _.forEach (results, function(result, index) {
