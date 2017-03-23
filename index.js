@@ -12,7 +12,7 @@ var bodyParser = require('body-parser');
 var google = require('googleapis');
 var url = require('url');
 var OAuth2 = google.auth.OAuth2;
-var googleAuth = require('./node_modules/google-auth');
+var googleAuth = require('./lib/google-auth');
 var swig  = require('swig');
 var Sequelize = require('sequelize');
 
