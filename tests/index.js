@@ -285,15 +285,15 @@ describe('server', function() {
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
-    it('20 requests should bias redirect results', twentyAtATime(0.8,
-      function(done) {
+    it('20 requests should bias redirect results', twentyAtATime(0.8));
+    it('should be biased toward the first trial', function(done) {
           request.get(baseUrl + '/admin/datajson/' + TRIALS[0], function(err, response, body) {
             var data = JSON.parse(body);
-            expect(data[data.length-1].successes > 50).to.equal(true);
+            expect(data[data.length-1].y > .5).to.equal(true);
             done();
           });
         }
-    ));
+      );
 
     it('should now be weighted with bandit', testJsBanditResponse(20, function(timesEach) {
       console.log('inbalance after 0.8 preference', timesEach);
