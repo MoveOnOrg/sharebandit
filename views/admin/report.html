@@ -8,6 +8,7 @@
     google.charts.setOnLoadCallback(function() {
          drawChart('chart_div_actions', 'actionjson');
          drawChart('chart_div', 'datajson');
+         drawChart('chart_div_selection', 'selectionjson');
     });
 
     function drawChart(targetElement, dataType) {
@@ -17,19 +18,29 @@
       var num_variants = 0;
       var id_to_col = {};
       {% for i in variants %}
-      trial = "Trial {{i.id}} ({{i.headline}})";
-      data.addColumn('number', trial);
+      variant = "Variant {{i.id}}";
+      data.addColumn('number', variant);
       num_variants++;
       id_to_col.id_{{i.id}} = num_variants; 
       {% endfor %}
 
       var calls = [];
+  
       {% for i in variants %}
+        if (dataType === 'selectionjson') {
+          calls.push(
+            jQuery.getJSON('/admin/'+dataType+'/{% for v in variants %}{{v.id}}-{%endfor%}/{{i.id}}', function(new_data){
+              return new_data;
+            })
+          );
+        }
+        else {
           calls.push(
              jQuery.getJSON('/admin/'+dataType+'/{{i.id}}', function(new_data){
               return new_data;
             })
           );
+        }
       {% endfor %}
       $.when.apply($,calls).done(function() {
        // each call result is sent as arguments[i]
@@ -51,13 +62,22 @@
        });
         new google.visualization.LineChart(document.getElementById(targetElement)).draw(data, {
           curveType: "function",
-          width: 500, height: 400,
+          width: 700, height: 400,
           vAxis: {maxValue: 1,
                   viewWindow:{
                     max:1,
                     min:0
                   }
-                 }
+                 },
+          chartArea: {
+            width: '70%', 
+            height: '80%',
+            left: 50,
+            top: 10
+          },
+          legend: {
+            position: 'right'
+          }
         }
       );
         });
@@ -83,6 +103,7 @@
 <div>
   <h3>Report for url {{variants[0].url }}</h3>
 </div>
+<hr/>
 
 <!--Divs that will hold the viz-->
 <h4>Percent of shares that lead to signatures</h4>
@@ -90,6 +111,9 @@
 
 <h4>Percent of shares that lead to clicks/views</h4>
 <div id="chart_div"></div>
+
+<h4>Variant selection rates</h4>
+<div id="chart_div_selection"></div>
 
 {% endblock %}
 
