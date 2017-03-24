@@ -18,7 +18,7 @@ var init = function(app, schema, sequelize, config) {
 
   // Empty page to confirm site is up
   app.get('/ping', function (req, res) {
-    res.render('page', {});
+    res.end('OK');
   });
 
   app.get('/r/:abver/:domain*',
