@@ -69,8 +69,12 @@ var bayesBandit = function(url, sequelize, successMetric) {
           var totalSuccess = variants.reduce(function(total, variant) {
             return total + variant.success;
           }, 0);
-          if (totalSuccess < 20 * variants.length) {
-            var randomized = variants.sort(function() {
+          var uncompletedVariants = variants.filter(function(v) {
+            return v.success < 20;
+          });
+          if (uncompletedVariants.length
+              && totalSuccess < 100 * variants.length) {
+            var randomized = uncompletedVariants.sort(function() {
               return 0.5 - Math.random();
             });
             resolve(randomized[0].trial);
