@@ -16,6 +16,11 @@ var init = function(app, schema, sequelize, config) {
            );
   };
 
+  // Empty page to confirm site is up
+  app.get('/ping', function (req, res) {
+    res.end('OK');
+  });
+
   app.get('/r/:abver/:domain*',
           function (req, res) {
             //NOTE: any caching layer:
@@ -29,7 +34,7 @@ var init = function(app, schema, sequelize, config) {
             res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
             res.setHeader("Pragma", "no-cache");
             res.setHeader("Expires", "0");
-            
+
             var domainInfo = config.domain_whitelist[req.params.domain];
             var pathname = req.params[0];
             var proto = domainInfo.proto;
@@ -42,7 +47,7 @@ var init = function(app, schema, sequelize, config) {
               'pathname': decodeURIComponent(pathname),
               'query': forwardedQuery
             });
-            
+
             /// 1. Am I Facebook Crawler?
             //https://developers.facebook.com/docs/sharing/webmasters/crawler
             if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.params.abver)) {
@@ -247,7 +252,7 @@ var init = function(app, schema, sequelize, config) {
 
   app.get('/js/:domain*', js_result('success'));
   app.get('/jsaction/:domain*', js_result('action'));
-  
+
 }
 
 module.exports = init;
