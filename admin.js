@@ -211,29 +211,31 @@ var successRate = function(isAction) {
 };
 
 var selectionRate = function(results, allVariants, res) {
-      var totalTrials = 0;
-      var trialCount = 0;
-
+  var totalTrials = 0;
+  var trialCount = 0;
+  var collectors = {};
+  var data = [];
+  allVariants.forEach(function(v) {
+    collectors[v] = {'total':0}
+  });
       _.forEach (results, function(result, index) {
-        totalTrials++;
+        var totalTrials = index+1;
         var d = result.dataValues;
-        if (parseInt(d['trial']) === parseInt(currentVariant)) {
-          trialCount++
-        }
-        data.bandits.push({
-          time: result.dataValues.createdAt,
-          trial: currentVariant,
-          y: trialCount/totalTrials
+        collectors[d.trial].total++
+        data.push({
+          time: d.createdAt,
+          trial: d.trial,
+          y: collectors[d.trial].total/totalTrials
         });
       });
       res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.stringify(data.bandits));
+      res.send(JSON.stringify({'results': data}));
 }
 
 
 app.get('/admin/datajson/*', adminauth, jsonQuery(successRate(false)));
 app.get('/admin/actionjson/*', adminauth, jsonQuery(successRate(true)));
-app.get('/admin/selectionjson/:allvariants/:variant/', adminauth, jsonQuery(selectionRate));
+app.get('/admin/selectionjson/*', adminauth, jsonQuery(selectionRate));
 app.get('/admin/report/*',
   adminauth,
   function (req, res) {
