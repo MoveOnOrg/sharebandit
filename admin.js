@@ -1,6 +1,6 @@
 var _ = require('lodash');
 var url = require('url');
-var bandit = require('bandit');
+var bandit = require('./bandit.js');
 
 var init = function(app, schema, sequelize, adminauth, config, moduleLinks) {
 
@@ -260,10 +260,11 @@ var selectionSimulation = function(results, allVariants, res) {
     }
     rbetasLibrary = []
     for (var i = 0; i <100; i++) {
-    bandit.chooseFromVariants(variants, function(choice, rbetas){
-      rbetasLibrary.push(rbetas);
-      simulationTally[choice]++;
-    }, null, 1);
+      bandit.chooseFromVariants(variants, function(choice, rbetas){
+        rbetasLibrary.push(rbetas);
+        simulationTally[choice]++;
+      }, null, 1);
+    }
   });
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify({'results': simulationTally, 'rbetas': rbetasLibrary}));

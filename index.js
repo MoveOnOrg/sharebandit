@@ -26,7 +26,7 @@ var shutdown = function() {
 // Launch server.
 var boot = function(config) {
   if (!config) {
-    console.log('loading config from config/config.json')
+    console.log('loading config from config/config.json');
     config = configFile;
   }
 
