@@ -287,9 +287,15 @@ describe('server', function() {
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('should be biased toward the first trial', function(done) {
-          request.get(baseUrl + '/admin/datajson/' + TRIALS[0], function(err, response, body) {
-            var data = JSON.parse(body);
-            expect(data[data.length-1].y > .5).to.equal(true);
+          request.get(baseUrl + '/admin/reportjson/clicks/' + TRIALS.join('-'), function(err, response, body) {
+            var data = JSON.parse(body).results;
+            for (var i=1;i<data.length;i++) {
+              var end = data[data.length-i];
+              if (end.trial == TRIALS[0]) {
+                expect(end.y > .5).to.equal(true);
+                break;
+              }
+            }
             done();
           });
         }

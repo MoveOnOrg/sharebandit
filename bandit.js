@@ -62,7 +62,13 @@ var bayesBandit = function(url, sequelize, successMetric) {
             type: sequelize.QueryTypes.SELECT
           }
         )
-        .then(function(variants){
+        .then(function(variants) {
+          return chooseFromVariants(variants, resolve, reject);
+        });
+    });
+};
+
+function chooseFromVariants(variants, resolve, reject) {
           if (!variants || variants.length == 0) {
             resolve(null);
           };
@@ -92,8 +98,9 @@ var bayesBandit = function(url, sequelize, successMetric) {
             }).sort().reverse();
             resolve(rbetas[0][1]);
           }
-        });
-    });
-};
+        }
 
-module.exports = bayesBandit;
+module.exports = {
+  choose: bayesBandit,
+  chooseFromVariants: chooseFromVariants
+};

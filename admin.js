@@ -232,10 +232,33 @@ var selectionRate = function(results, allVariants, res) {
       res.send(JSON.stringify({'results': data}));
 }
 
+var selectionRate = function(results, allVariants, res) {
+  var totalTrials = 0;
+  var trialCount = 0;
+  var collectors = {};
+  var data = [];
+  allVariants.forEach(function(v) {
+    collectors[v] = {'total':0}
+  });
+      _.forEach (results, function(result, index) {
+        var totalTrials = index+1;
+        var d = result.dataValues;
+        collectors[d.trial].total++
+        data.push({
+          time: d.createdAt,
+          trial: d.trial,
+          y: collectors[d.trial].total/totalTrials
+        });
+      });
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.stringify({'results': data}));
+}
 
-app.get('/admin/datajson/*', adminauth, jsonQuery(successRate(false)));
-app.get('/admin/actionjson/*', adminauth, jsonQuery(successRate(true)));
-app.get('/admin/selectionjson/*', adminauth, jsonQuery(selectionRate));
+
+app.get('/admin/reportjson/clicks/*', adminauth, jsonQuery(successRate(false)));
+app.get('/admin/reportjson/actions/*', adminauth, jsonQuery(successRate(true)));
+app.get('/admin/reportjson/selection/*', adminauth, jsonQuery(selectionRate));
+app.get('/admin/reportjson/simulation/*', adminauth, jsonQuery(selectionRate));
 app.get('/admin/report/*',
   adminauth,
   function (req, res) {

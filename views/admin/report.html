@@ -6,9 +6,9 @@
 <script type="text/javascript">
     google.charts.load('current', {'packages':['corechart']});
     google.charts.setOnLoadCallback(function() {
-         drawChart('chart_div_actions', 'actionjson');
-         drawChart('chart_div', 'datajson');
-         drawChart('chart_div_selection', 'selectionjson');
+         drawChart('chart_div_actions', 'actions');
+         drawChart('chart_div', 'clicks');
+         drawChart('chart_div_selection', 'selection');
     });
 
     function drawChart(targetElement, dataType) {
@@ -24,7 +24,7 @@
         id_to_col['id_'+this] = i;
       });
 
-      jQuery.getJSON('/admin/'+dataType+'/{% for v in variants %}{{v.id}}-{%endfor%}', function(new_data){
+      jQuery.getJSON('/admin/reportjson/'+dataType+'/{% for v in variants %}{{v.id}}-{%endfor%}', function(new_data){
         return new_data;
       }).then(function(response) {
         for (var tv=0; tv<numVariants; tv++) {
