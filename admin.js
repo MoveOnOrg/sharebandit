@@ -192,9 +192,46 @@ var jsonQuery = function(isAction) {
   };
 }
 
+var jsonQuerySelection = function() {
+  return function (req, res) {
+    var data = {bandits: []};
+    var allVariants = req.params.allvariants.split('-').filter(function(v) {
+      return v;
+    });
+    var currentVariant = req.params.variant;
+    schema.Sharer.findAll({
+      where: {
+        trial: {
+          $in: allVariants
+        }
+      },
+      order: ['createdAt']
+    }).then(function(results) {
+
+      var totalTrials = 0;
+      var trialCount = 0;
+
+      _.forEach (results, function(result, index) {
+        totalTrials++;
+        var d = result.dataValues;
+        if (parseInt(d['trial']) === parseInt(currentVariant)) {
+          trialCount++
+        }
+        data.bandits.push({
+          time: result.dataValues.createdAt,
+          trial: currentVariant,
+          y: trialCount/totalTrials
+        });
+      });
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.stringify(data.bandits));
+    });
+  };
+}
+
 app.get('/admin/datajson/*', adminauth, jsonQuery(false));
 app.get('/admin/actionjson/*', adminauth, jsonQuery(true));
-
+app.get('/admin/selectionjson/:allvariants/:variant/', adminauth, jsonQuerySelection());
 app.get('/admin/report/*',
   adminauth,
   function (req, res) {
