@@ -27,7 +27,8 @@
         id_to_col['id_'+this] = i;
       });
 
-      jQuery.getJSON('/admin/reportjson/'+dataType+'/{% for v in variants %}{{v.id}}-{%endfor%}', function(new_data){
+      jQuery.getJSON('/admin/reportjson/'+dataType+'/{% for v in variants %}{{v.id}}-{%endfor%}',
+                     function(new_data){
         return new_data;
       }).then(function(response) {
         for (var tv=0; tv<numVariants; tv++) {
@@ -98,16 +99,16 @@
 <hr/>
 
 <!--Divs that will hold the viz-->
-<h4>Percent of shares that lead to signatures</h4>
+<h4>Percent of shares that lead to conversions</h4>
 <div id="chart_div_actions"></div>
 
 <h4>Percent of shares that lead to clicks/views</h4>
 <div id="chart_div"></div>
 
-<h4>Variant selection rates</h4>
+<h4>Variant selection rates for conversions</h4>
 <div id="chart_div_selection"></div>
 <form method="GET">
-<h4><button type="submit" name="simulate" value="1">Variant selection rates</button></h4>
+<h4><button type="submit" name="simulate" value="1">Variant simulation rates</button> (for conversions)</h4>
 <div id="chart_div_simulation"></div>
 </form>
 {% endblock %}

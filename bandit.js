@@ -87,18 +87,18 @@ function chooseFromVariants(variants, resolve, reject, numResults) {
   } else {
     var rbetas = variants.map(function(variant) {
       var results = PD.rbeta(
-          numResults, //number of results wanted
+          numResults || 1, //number of results wanted
           (1*variant.success) + 1,
           (1*variant.trials) - (1*variant.success) + 1
         );
       return [
-        //returns array of rbetas
         results[0],
         variant.trial,
         results
       ];
     }).sort().reverse();
-    resolve(rbetas[0][1], rbetas);
+    resolve({choice: rbetas[0][1],
+             allResults: rbetas});
   }
 }
 

@@ -242,7 +242,7 @@ describe('server', function() {
 
   
     var twentyAtATime = function(threshold, finalRun, action) {
-      action = action || '/r/';
+      action = action || '/a/';
       // Basically this runs too slowly to be in 2000ms timeout, so we'll do it a bunch
       //  of times to inflate the results
       return function(done) {
@@ -279,15 +279,19 @@ describe('server', function() {
     };
 
     it('20 requests should bias redirect results', twentyAtATime(0.8));
-    it('20 action requests will not bias results', twentyAtATime(0.1, false, '/a/'));
-    it('20 action requests will not bias results', twentyAtATime(0.1, false, '/a/'));
+    it('20 click requests will not bias results', twentyAtATime(0.1, false, '/r/'));
+    it('20 click requests will not bias results', twentyAtATime(0.1, false, '/r/'));
+    it('20 requests should bias redirect results', twentyAtATime(0.8));
+    it('20 requests should bias redirect results', twentyAtATime(0.8));
+    it('20 requests should bias redirect results', twentyAtATime(0.8));
+    it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('should be biased toward the first trial', function(done) {
-          request.get(baseUrl + '/admin/reportjson/clicks/' + TRIALS.join('-'), function(err, response, body) {
+          request.get(baseUrl + '/admin/reportjson/actions/' + TRIALS.join('-'), function(err, response, body) {
             var data = JSON.parse(body).results;
             for (var i=1;i<data.length;i++) {
               var end = data[data.length-i];

@@ -213,24 +213,27 @@ var successRate = function(isAction) {
 
 var selectionRate = function(results, allVariants, res) {
   var totalTrials = 0;
-  var trialCount = 0;
   var collectors = {};
   var data = [];
+  var actionkey = 'success';
   allVariants.forEach(function(v) {
     collectors[v] = {'total':0}
   });
-      _.forEach (results, function(result, index) {
-        var totalTrials = index+1;
-        var d = result.dataValues;
-        collectors[d.trial].total++
-        data.push({
-          time: d.createdAt,
-          trial: d.trial,
-          y: collectors[d.trial].total/totalTrials
-        });
-      });
-      res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.stringify({'results': data}));
+  _.forEach (results, function(result, index) {
+    var d = result.dataValues;
+    if (d[actionkey] == 0) {
+      return;
+    }
+    totalTrials++
+    collectors[d.trial].total++
+    data.push({
+      time: d.createdAt,
+      trial: d.trial,
+      y: collectors[d.trial].total/totalTrials
+    });
+  });
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify({'results': data}));
 }
 
 var selectionSimulation = function(results, allVariants, res) {
