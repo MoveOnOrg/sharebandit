@@ -63,42 +63,44 @@ var bayesBandit = function(url, sequelize, successMetric) {
           }
         )
         .then(function(variants) {
-          return chooseFromVariants(variants, resolve, reject);
+          return chooseFromVariants(variants, resolve, reject, 1);
         });
     });
 };
 
-function chooseFromVariants(variants, resolve, reject) {
-          if (!variants || variants.length == 0) {
-            resolve(null);
-          };
-          var totalSuccess = variants.reduce(function(total, variant) {
-            return total + variant.success;
-          }, 0);
-          var uncompletedVariants = variants.filter(function(v) {
-            return v.success < 20;
-          });
-          if (uncompletedVariants.length
-              && totalSuccess < 100 * variants.length) {
-            var randomized = uncompletedVariants.sort(function() {
-              return 0.5 - Math.random();
-            });
-            resolve(randomized[0].trial);
-          } else {
-            var rbetas = variants.map(function(variant) {
-              return [
-                //returns array of rbetas
-                PD.rbeta(
-                  1, //number of results wanted
-                  (1*variant.success) + 1,
-                  (1*variant.trials) - (1*variant.success) + 1
-                )[0],
-                variant.trial
-              ];
-            }).sort().reverse();
-            resolve(rbetas[0][1]);
-          }
-        }
+function chooseFromVariants(variants, resolve, reject, numResults) {
+  if (!variants || variants.length == 0) {
+    resolve(null);
+  };
+  var totalSuccess = variants.reduce(function(total, variant) {
+    return total + variant.success;
+  }, 0);
+  var uncompletedVariants = variants.filter(function(v) {
+    return v.success < 20;
+  });
+  if (uncompletedVariants.length
+      && totalSuccess < 100 * variants.length) {
+    var randomized = uncompletedVariants.sort(function() {
+      return 0.5 - Math.random();
+    });
+    resolve(randomized[0].trial);
+  } else {
+    var rbetas = variants.map(function(variant) {
+      var results = PD.rbeta(
+          numResults, //number of results wanted
+          (1*variant.success) + 1,
+          (1*variant.trials) - (1*variant.success) + 1
+        );
+      return [
+        //returns array of rbetas
+        results[0],
+        variant.trial,
+        results
+      ];
+    }).sort().reverse();
+    resolve(rbetas[0][1], rbetas);
+  }
+}
 
 module.exports = {
   choose: bayesBandit,

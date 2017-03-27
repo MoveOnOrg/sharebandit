@@ -1,5 +1,6 @@
 var _ = require('lodash');
 var url = require('url');
+var bandit = require('bandit');
 
 var init = function(app, schema, sequelize, adminauth, config, moduleLinks) {
 
@@ -232,33 +233,47 @@ var selectionRate = function(results, allVariants, res) {
       res.send(JSON.stringify({'results': data}));
 }
 
-var selectionRate = function(results, allVariants, res) {
+var selectionSimulation = function(results, allVariants, res) {
   var totalTrials = 0;
   var trialCount = 0;
   var collectors = {};
   var data = [];
+  var actionkey = 'action';
   allVariants.forEach(function(v) {
-    collectors[v] = {'total':0}
+    collectors[v] = {'trials':0, 'success': 0, 'trial': v}
   });
-      _.forEach (results, function(result, index) {
-        var totalTrials = index+1;
-        var d = result.dataValues;
-        collectors[d.trial].total++
-        data.push({
-          time: d.createdAt,
-          trial: d.trial,
-          y: collectors[d.trial].total/totalTrials
-        });
-      });
-      res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.stringify({'results': data}));
+  _.forEach (results, function(result, index) {
+    var d = result.dataValues;
+    var c = collectors[d.trial];
+    c.trials++
+    if (d[actionkey] > 0) {
+      c.success++
+    }
+    // run simulation to check algo
+    var variants = Object.keys(collectors).map(function(v){
+      return collectors[v]
+    });
+    // choose 100 times and tally the results
+    simulationTally = {}
+    for (variant in variants) {
+      simulationTally[variant] = 0
+    }
+    rbetasLibrary = []
+    for (var i = 0; i <100; i++) {
+    bandit.chooseFromVariants(variants, function(choice, rbetas){
+      rbetasLibrary.push(rbetas);
+      simulationTally[choice]++;
+    }, null, 1);
+  });
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify({'results': simulationTally, 'rbetas': rbetasLibrary}));
 }
 
 
 app.get('/admin/reportjson/clicks/*', adminauth, jsonQuery(successRate(false)));
 app.get('/admin/reportjson/actions/*', adminauth, jsonQuery(successRate(true)));
 app.get('/admin/reportjson/selection/*', adminauth, jsonQuery(selectionRate));
-app.get('/admin/reportjson/simulation/*', adminauth, jsonQuery(selectionRate));
+app.get('/admin/reportjson/simulation/*', adminauth, jsonQuery(selectionSimulation));
 app.get('/admin/report/*',
   adminauth,
   function (req, res) {
