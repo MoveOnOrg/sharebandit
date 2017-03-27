@@ -164,8 +164,7 @@ app.post('/admin/delete/*',
 	}
 );
 
-var jsonQuery = function(isAction) {
-  var actionkey = (isAction ? 'action_count' : 'success_count');
+var jsonQuery = function(resultFunction) {
   return function (req, res) {
     var data = [];
     var allVariants = req.params[0].split('-').filter(function(v) {
@@ -179,40 +178,39 @@ var jsonQuery = function(isAction) {
       },
       order: ['createdAt']
     }).then(function(results) {
-      var successes = 0;
-      _.forEach (results, function(result, index) {
-        var d = result.dataValues;
-        if (d[actionkey] > 0) {
-          ++successes;
-        }
-        data.push({
-          time: result.dataValues.createdAt,
-          trial: result.dataValues.trial,
-          y: successes/(index+1)
-        });
-      });
-      res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.stringify({'results': data}));
+      resultFunction(results, allVariants, res)
     });
   };
 }
 
-var jsonQuerySelection = function() {
-  return function (req, res) {
-    var data = {bandits: []};
-    var allVariants = req.params.allvariants.split('-').filter(function(v) {
-      return v;
+var successRate = function(isAction) {
+  var actionkey = (isAction ? 'action_count' : 'success_count');
+  return function(results, allVariants, res) {
+    var successes = 0;
+    var collectors = {};
+    var data = [];
+    allVariants.forEach(function(v) {
+      collectors[v] = {'successes':0, 'total':0}
     });
-    var currentVariant = req.params.variant;
-    schema.Sharer.findAll({
-      where: {
-        trial: {
-          $in: allVariants
-        }
-      },
-      order: ['createdAt']
-    }).then(function(results) {
+    _.forEach (results, function(result) {
+      var d = result.dataValues;
+      var c = collectors[d.trial];
+      if (d[actionkey] > 0) {
+        c.successes++
+      }
+      c.total++
+      data.push({
+        time: d.createdAt,
+        trial: d.trial,
+        y: c.successes/c.total
+      });
+    });
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({'results': data}));
+  };
+};
 
+var selectionRate = function(results, allVariants, res) {
       var totalTrials = 0;
       var trialCount = 0;
 
@@ -230,13 +228,12 @@ var jsonQuerySelection = function() {
       });
       res.setHeader('Content-Type', 'application/json');
       res.send(JSON.stringify(data.bandits));
-    });
-  };
 }
 
-app.get('/admin/datajson/*', adminauth, jsonQuery(false));
-app.get('/admin/actionjson/*', adminauth, jsonQuery(true));
-app.get('/admin/selectionjson/:allvariants/:variant/', adminauth, jsonQuerySelection());
+
+app.get('/admin/datajson/*', adminauth, jsonQuery(successRate(false)));
+app.get('/admin/actionjson/*', adminauth, jsonQuery(successRate(true)));
+app.get('/admin/selectionjson/:allvariants/:variant/', adminauth, jsonQuery(selectionRate));
 app.get('/admin/report/*',
   adminauth,
   function (req, res) {

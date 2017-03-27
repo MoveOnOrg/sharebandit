@@ -28,23 +28,25 @@
         return new_data;
       }).then(function(response) {
         for (var tv=0; tv<numVariants; tv++) {
-        response.results.forEach(function(row) {
-          var create_row = []
-          create_row[0] = new Date(row.time);
-          if (row.trial != trialVariants[tv]) {
-            return; //this will do weird time-codey things
-          }
-          for (i=1; i <= numVariants; i++) {
-            var key = 'id_' + row.trial
-            if (i-1 === id_to_col[key]) {
-              create_row[i] = row.y;
-            } else {
-              create_row[i] = null;
+          // We have to iterate over the variants rather than
+          // dumping them in a single order, so LineChart can realize it needs to 'start at the beginning'
+          response.results.forEach(function(row) {
+            var create_row = []
+            create_row[0] = new Date(row.time);
+            if (row.trial != trialVariants[tv]) {
+              return; //this will do weird time-codey things
             }
-          }
-          console.log(create_row);
-          data.addRow(create_row);
-        });
+            for (i=1; i <= numVariants; i++) {
+              var key = 'id_' + row.trial
+              if (i-1 === id_to_col[key]) {
+                create_row[i] = row.y;
+              } else {
+                create_row[i] = null;
+              }
+            }
+            console.log(create_row);
+            data.addRow(create_row);
+          });
         }
         console.log('data', data);
         new google.visualization.LineChart(document.getElementById(targetElement)).draw(data, {
