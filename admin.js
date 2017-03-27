@@ -255,9 +255,9 @@ var selectionSimulation = function(results, allVariants, res) {
     });
     // choose 100 times and tally the results
     simulationTally = {}
-    for (variant in variants) {
-      simulationTally[variant] = 0
-    }
+    allVariants.map(function(v) {
+      simulationTally[v] = 0
+    });
     rbetasLibrary = []
     for (var i = 0; i <100; i++) {
       bandit.chooseFromVariants(variants, function(choice, rbetas){
@@ -265,9 +265,17 @@ var selectionSimulation = function(results, allVariants, res) {
         simulationTally[choice]++;
       }, null, 1);
     }
+    for (var variant in simulationTally) {
+      data.push({
+          time: d.createdAt,
+          trial: variant,
+          y: simulationTally[variant]
+        });
+    }
+
   });
   res.setHeader('Content-Type', 'application/json');
-  res.send(JSON.stringify({'results': simulationTally, 'rbetas': rbetasLibrary}));
+  res.send(JSON.stringify({'results': data, 'rbetas': rbetasLibrary}));
 }
 
 
