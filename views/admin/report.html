@@ -15,51 +15,38 @@
       var data = new google.visualization.DataTable();
       data.addColumn('datetime', 'Time');
 
-      var num_variants = 0;
       var id_to_col = {};
-      {% for i in variants %}
-      variant = "Variant {{i.id}}";
-      data.addColumn('number', variant);
-      num_variants++;
-      id_to_col.id_{{i.id}} = num_variants; 
-      {% endfor %}
+      var trialVariants = [{% for i in variants %}"{{i.id}}",{%endfor%} 'aftercomma_discard' ]
+      trialVariants.pop();
+      var numVariants = trialVariants.length;
+      $(trialVariants).each(function(i) {
+        data.addColumn('number', "Variant "+ this);
+        id_to_col['id_'+this] = i;
+      });
 
-      var calls = [];
-  
-      {% for i in variants %}
-        if (dataType === 'selectionjson') {
-          calls.push(
-            jQuery.getJSON('/admin/'+dataType+'/{% for v in variants %}{{v.id}}-{%endfor%}/{{i.id}}', function(new_data){
-              return new_data;
-            })
-          );
-        }
-        else {
-          calls.push(
-             jQuery.getJSON('/admin/'+dataType+'/{{i.id}}', function(new_data){
-              return new_data;
-            })
-          );
-        }
-      {% endfor %}
-      $.when.apply($,calls).done(function() {
-       // each call result is sent as arguments[i]
-       $(arguments).each(function(multiresponse) {
-        var dataToGraph = this[0];
-        dataToGraph.forEach(function(row) {
+      jQuery.getJSON('/admin/'+dataType+'/{% for v in variants %}{{v.id}}-{%endfor%}', function(new_data){
+        return new_data;
+      }).then(function(response) {
+        for (var tv=0; tv<numVariants; tv++) {
+        response.results.forEach(function(row) {
           var create_row = []
           create_row[0] = new Date(row.time);
-          for (i=1; i <= num_variants; i++) {
+          if (row.trial != trialVariants[tv]) {
+            return; //this will do weird time-codey things
+          }
+          for (i=1; i <= numVariants; i++) {
             var key = 'id_' + row.trial
-            if (i === id_to_col[key]) {
+            if (i-1 === id_to_col[key]) {
               create_row[i] = row.y;
             } else {
               create_row[i] = null;
             }
           }
+          console.log(create_row);
           data.addRow(create_row);
         });
-       });
+        }
+        console.log('data', data);
         new google.visualization.LineChart(document.getElementById(targetElement)).draw(data, {
           curveType: "function",
           width: 700, height: 400,

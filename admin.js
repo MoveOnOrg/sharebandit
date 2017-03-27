@@ -167,10 +167,15 @@ app.post('/admin/delete/*',
 var jsonQuery = function(isAction) {
   var actionkey = (isAction ? 'action_count' : 'success_count');
   return function (req, res) {
-    var data = {bandits: []}
+    var data = [];
+    var allVariants = req.params[0].split('-').filter(function(v) {
+      return v;
+    });
     schema.Sharer.findAll({
       where: {
-        trial: req.params[0]
+        trial: {
+          $in: allVariants //req.params[0]
+        }
       },
       order: ['createdAt']
     }).then(function(results) {
@@ -180,14 +185,14 @@ var jsonQuery = function(isAction) {
         if (d[actionkey] > 0) {
           ++successes;
         }
-        data.bandits.push({
+        data.push({
           time: result.dataValues.createdAt,
           trial: result.dataValues.trial,
           y: successes/(index+1)
         });
       });
       res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.stringify(data.bandits));
+      res.send(JSON.stringify({'results': data}));
     });
   };
 }
