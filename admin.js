@@ -237,10 +237,13 @@ var variantReports = function(results, allVariants, res, req) {
         : null
       ),
     };
-    if (req.query.simulate //this might be crazy
-        && (req.query.simulate == 'all' || Math.random() > 0.9)) {
-      simTally = runSimulation(simVariants, allVariants);
-      dataPoint['simulated'] = simTally[row.trial];
+    if (req.query.simulate) {
+      if (req.query.simulate == 'all' || Math.random() > 0.9) {
+        simTally = runSimulation(simVariants, allVariants);
+        dataPoint['simulated'] = simTally[row.trial];
+      } else {
+        dataPoint['simulated'] = null;
+      }
     }
     data.push(dataPoint);
   });
