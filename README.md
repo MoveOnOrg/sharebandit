@@ -36,6 +36,8 @@ How to run locally:
 
 6. Run database migrations
    * sequelize db:migrate
+   * # NOTE, if you use the db config structure as-is, you'll need to tell sequalize where to find your db config, like this:
+   * NODE_ENV=db sequelize db:migrate --config config/config.json
 
 7. Setup Auth
    * If you are doing development on domain localhost,

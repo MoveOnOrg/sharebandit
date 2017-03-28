@@ -8,3 +8,4 @@ testdb.sqlite
 node_modules/**
 npm-debug.log
 /.env
+local_modules
