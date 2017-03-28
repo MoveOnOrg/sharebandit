@@ -16,6 +16,7 @@
       }
       jQuery.getJSON('/admin/reportjson/stats/' + trialVariants.join('-') + jsonQuery).then(
         function(response) {
+          window.reportJSON = response;
           drawChart({'title': 'Percent of shares that lead to conversions'},
                     response, 'convertRate');
           drawChart({'title': 'Percent of shares that lead to clicks/views'},
@@ -24,16 +25,26 @@
                     response, 'convertSelectionRate');
           drawChart({'title': 'Variant selection rates for clicks'},
                     response, 'clickSelectionRate');
-          drawChart({'title': 'Total converted shares per trial'},
-                    response, 'totalConverts');
+          drawChart({'title': 'Total converted shares by variant'},
+                    response, 'totalConverts', {
+                      chartType: 'AreaChart',
+                      additionalOptions: {
+                        //Stacking fails because isStacked doesn't support interpolateNulls
+                        // https://developers.google.com/chart/interactive/docs/gallery/areachart#stacking-areas
+                        isStacked: 'absolute',
+                        interpolateNulls: true,
+                        vAxis: {viewWindow:{min: 0}}
+                      }
+                    });
 
           if (/simulate=1/.test(document.location.search)) {
-            drawChart($('#chart_div_simulation').get(0), response, 'simulated');
+            drawChart($('#chart_div_simulation').get(0), response, 'simulated',
+                      {'maxValue':100});
           }
         });
     });
 
-    function drawChart(targetElement, response, yKey, maxValue) {
+    function drawChart(targetElement, response, yKey, chartOptions) {
       if (!targetElement.tagName) {
         //if targetElement is an object to create dom
         var parent = $(targetElement.parent || '#reports');
@@ -77,12 +88,20 @@
             data.addRow(create_row);
           });
         }
-        new google.visualization.LineChart(targetElement).draw(data, {
+
+      var opts = {
+        chartType: 'LineChart',
+        maxValue: 1
+      };
+      if (chartOptions) {
+        $.extend(opts, chartOptions);
+      }
+      var googleChartOptions = {
           curveType: "function",
           width: 700, height: 400,
-          vAxis: {maxValue: maxValue || 1,
+          vAxis: {maxValue: opts.maxValue,
                   viewWindow:{
-                    max: maxValue|| 1,
+                    max: opts.maxValue,
                     min: 0
                   }
                  },
@@ -95,11 +114,15 @@
           legend: {
             position: 'right'
           },
-          vAxis: {
-            ticks: [0,0.2,0.4,0.6,0.8,1.0]
-          }
-        }
-      );
+      };
+      if (opts.maxValue == 1) {
+        googleChartOptions['vAxis']['ticks'] = [0,0.2,0.4,0.6,0.8,1.0];
+      }
+      if (opts.additionalOptions) {
+        $.extend(googleChartOptions, opts.additionalOptions);
+      }
+      console.log(googleChartOptions);
+      new google.visualization[opts.chartType](targetElement).draw(data, googleChartOptions);
     }
     </script>
 
@@ -125,7 +148,7 @@
 </div>
 
 <form method="GET">
-<h4><button type="submit" name="simulate" value="1">Variant conversion simulation rates</button> (slow!)</h4>
+<h4><button type="submit" name="simulate" value="1">Simulate selection rates for conversions</button> (slow!)</h4>
 <div id="chart_div_simulation"></div>
 </form>
 {% endblock %}
