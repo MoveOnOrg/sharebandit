@@ -179,113 +179,95 @@ var jsonQuery = function(resultFunction) {
       },
       order: ['createdAt']
     }).then(function(results) {
-      resultFunction(results, allVariants, res)
+      resultFunction(results, allVariants, res, req)
     });
   };
 }
 
-var successRate = function(isAction) {
-  var actionkey = (isAction ? 'action_count' : 'success_count');
-  return function(results, allVariants, res) {
-    var successes = 0;
-    var collectors = {};
-    var data = [];
-    allVariants.forEach(function(v) {
-      collectors[v] = {'successes':0, 'total':0}
-    });
-    _.forEach (results, function(result) {
-      var d = result.dataValues;
-      var c = collectors[d.trial];
-      if (d[actionkey] > 0) {
-        c.successes++
-      }
-      c.total++
-      data.push({
-        time: d.createdAt,
-        trial: d.trial,
-        y: c.successes/c.total
-      });
-    });
-    res.setHeader('Content-Type', 'application/json');
-    res.send(JSON.stringify({'results': data}));
-  };
-};
-
-var selectionRate = function(results, allVariants, res) {
-  var totalTrials = 0;
+var variantReports = function(results, allVariants, res, req) {
   var collectors = {};
   var data = [];
-  var actionkey = 'success';
+  var crossVariantCounts = {
+    'clicks': 0,
+    'converts': 0,
+  };
   allVariants.forEach(function(v) {
-    collectors[v] = {'total':0}
+    collectors[v] = {
+      'trial': v,
+      'clicks': 0,
+      'converts': 0,
+      'trials':0, //i.e. total
+      //for simulation: .trials and .success are keys that bandit recognizes
+      'success': 0
+    };
   });
-  _.forEach (results, function(result, index) {
-    var d = result.dataValues;
-    if (d[actionkey] == 0) {
-      return;
+  //basically just collectors as an array (for simulation)
+  var simVariants = allVariants.map(function(v){
+    return collectors[v]
+  });
+
+  //now actually process results
+  _.forEach (results, function(result) {
+    var row = result.dataValues;
+    var tdata = collectors[row.trial];
+    if (row['action_count'] > 0) {
+      tdata.converts++
+      tdata.success++ //for simulation
+      crossVariantCounts.converts++
     }
-    totalTrials++
-    collectors[d.trial].total++
-    data.push({
-      time: d.createdAt,
-      trial: d.trial,
-      y: collectors[d.trial].total/totalTrials
-    });
+    if (row['success_count'] > 0) {
+      tdata.clicks++
+      crossVariantCounts.clicks++
+    }
+    tdata.trials++
+    var dataPoint = {
+      'time': row.createdAt,
+      'trial': row.trial,
+      // different y-axis options:
+      'totalClicks': tdata.clicks,
+      'totalConverts': tdata.converts,
+      'trackingConverts': allVariants.map(function(v) {
+        return collectors[v].converts
+      }),
+      'clickRate': tdata.clicks / tdata.trials,
+      'convertRate': tdata.converts / tdata.trials,
+      'clickSelectionRate': ((row['success_count'] > 0)
+        ? tdata.clicks / crossVariantCounts.clicks
+        : null
+      ),
+      'convertSelectionRate': ((row['action_count'] > 0)
+        ? tdata.converts / crossVariantCounts.converts
+        : null
+      ),
+    };
+    if (req.query.simulate) {
+      simTally = runSimulation(simVariants, allVariants);
+      dataPoint['simulated'] = simTally[row.trial];
+    }
+    data.push(dataPoint);
   });
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify({'results': data}));
-}
+};
 
-var selectionSimulation = function(results, allVariants, res) {
-  var totalTrials = 0;
-  var trialCount = 0;
-  var collectors = {};
-  var data = [];
-  var actionkey = 'action';
-  allVariants.forEach(function(v) {
-    collectors[v] = {'trials':0, 'success': 0, 'trial': v}
-  });
-  _.forEach (results, function(result, index) {
-    var d = result.dataValues;
-    var c = collectors[d.trial];
-    c.trials++
-    if (d[actionkey] > 0) {
-      c.success++
-    }
-    // run simulation to check algo
-    var variants = Object.keys(collectors).map(function(v){
-      return collectors[v]
-    });
+
+var runSimulation = function(variants, allVariants) {
     // choose 100 times and tally the results
     simulationTally = {}
+    // run simulation to check algo
     allVariants.map(function(v) {
       simulationTally[v] = 0
     });
-    rbetasLibrary = []
     for (var i = 0; i <100; i++) {
-      bandit.chooseFromVariants(variants, function(choice, rbetas){
-        rbetasLibrary.push(rbetas);
+      bandit.chooseFromVariants(variants, function(choice){
         simulationTally[choice]++;
       }, null, 1);
     }
-    for (var variant in simulationTally) {
-      data.push({
-          time: d.createdAt,
-          trial: variant,
-          y: simulationTally[variant]
-        });
-    }
-
-  });
-  res.setHeader('Content-Type', 'application/json');
-  res.send(JSON.stringify({'results': data, 'rbetas': rbetasLibrary}));
+  return simulationTally;
 }
 
 
-app.get('/admin/reportjson/clicks/*', adminauth, jsonQuery(successRate(false)));
-app.get('/admin/reportjson/actions/*', adminauth, jsonQuery(successRate(true)));
-app.get('/admin/reportjson/selection/*', adminauth, jsonQuery(selectionRate));
-app.get('/admin/reportjson/simulation/*', adminauth, jsonQuery(selectionSimulation));
+app.get('/admin/reportjson/stats/*', adminauth, jsonQuery(variantReports));
 app.get('/admin/report/*',
   adminauth,
   function (req, res) {
