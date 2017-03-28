@@ -14,21 +14,37 @@
       if (/simulate=1/.test(document.location.search)) {
         jsonQuery = '?simulate=1'
       }
-      jQuery.getJSON('/admin/reportjson/actions/' + trialVariants.join('-') + jsonQuery).then(
+      jQuery.getJSON('/admin/reportjson/stats/' + trialVariants.join('-') + jsonQuery).then(
         function(response) {
-          drawChart('chart_div_actions', 'actions', response, 'convertRate');
-          drawChart('chart_div', 'clicks', response, 'clickRate');
-          drawChart('chart_div_selection', 'selection', response, 'convertSelectionRate');
+          drawChart({'title': 'Percent of shares that lead to conversions'},
+                    response, 'convertRate');
+          drawChart({'title': 'Percent of shares that lead to clicks/views'},
+                    response, 'clickRate');
+          drawChart({'title': 'Variant selection rates for conversions'},
+                    response, 'convertSelectionRate');
+          drawChart({'title': 'Variant selection rates for clicks'},
+                    response, 'clickSelectionRate');
+          drawChart({'title': 'Total converted shares per trial'},
+                    response, 'totalConverts');
+
+          if (/simulate=1/.test(document.location.search)) {
+            drawChart($('#chart_div_simulation').get(0), response, 'simulated');
+          }
         });
-      if (/simulate=1/.test(document.location.search)) {
-        jQuery.getJSON('/admin/reportjson/simulation/' + trialVariants.join('-') + jsonQuery).then(
-          function(response) {
-            drawChart('chart_div_simulation', 'simulation', response, 'y', 100);
-          });
-      }
     });
 
-    function drawChart(targetElement, dataType, response, yKey, maxValue) {
+    function drawChart(targetElement, response, yKey, maxValue) {
+      if (!targetElement.tagName) {
+        //if targetElement is an object to create dom
+        var parent = $(targetElement.parent || '#reports');
+        var wrapper = $('<div class="goog-chart" />');
+        if (targetElement.title) {
+          wrapper.append('<h4>'+targetElement.title+'</h4>');
+        }
+        var chartdiv = $('<div />').appendTo(wrapper);
+        wrapper.appendTo(parent);
+        targetElement = chartdiv.get(0);
+      }
       var data = new google.visualization.DataTable();
       data.addColumn('datetime', 'Time');
 
@@ -50,17 +66,18 @@
             for (i=1; i <= numVariants; i++) {
               var key = 'id_' + row.trial
               if (i-1 === id_to_col[key]) {
+                if (row[yKey] === null) {
+                  return; //skip row
+                }
                 create_row[i] = row[yKey];
               } else {
                 create_row[i] = null;
               }
             }
-            console.log(create_row);
             data.addRow(create_row);
           });
         }
-        console.log('data', data);
-        new google.visualization.LineChart(document.getElementById(targetElement)).draw(data, {
+        new google.visualization.LineChart(targetElement).draw(data, {
           curveType: "function",
           width: 700, height: 400,
           vAxis: {maxValue: maxValue || 1,
@@ -104,16 +121,9 @@
   <h3>Report for url {{variants[0].url }}</h3>
 </div>
 <hr/>
+<div id="reports">
+</div>
 
-<!--Divs that will hold the viz-->
-<h4>Percent of shares that lead to conversions</h4>
-<div id="chart_div_actions"></div>
-
-<h4>Percent of shares that lead to clicks/views</h4>
-<div id="chart_div"></div>
-
-<h4>Variant selection rates for conversions</h4>
-<div id="chart_div_selection"></div>
 <form method="GET">
 <h4><button type="submit" name="simulate" value="1">Variant simulation rates</button> (for conversions)</h4>
 <div id="chart_div_simulation"></div>

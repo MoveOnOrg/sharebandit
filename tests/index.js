@@ -71,6 +71,42 @@ describe('server', function() {
   var SHARER_ABIDS = [123, 456]
   var TRIALS = [];
 
+  var twentyAtATime = function(threshold, finalRun, action) {
+      action = action || '/a/';
+      // Basically this runs too slowly to be in 2000ms timeout, so we'll do it a bunch
+      //  of times to inflate the results
+      return function(done) {
+        var ITER_TIMES = 20;
+        TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
+          return (baseUrl + action + i + '/' + URL_AB_NOHTTP);
+        });
+        var middlePart = '?absync=true&abid=';
+        var runRequest = function(after, i) {
+          return function () {
+            //console.log(i);
+            var trialChoice = ((Math.random() > threshold) ? 1 : 0);
+            request.get({
+              'url': TRIAL_REDIRECT_URLS[trialChoice]  + middlePart + parseInt(10000*Math.random()),
+              'followRedirect': false
+            }, after);
+          };
+        };
+        var longChain = runRequest(function() {
+          if (finalRun) {
+            return finalRun(done);
+          } else {
+            done();
+          }
+        });
+        // hacky way to sequence runs -- SQLITE will suffer from locking issues
+        //   otherwise
+        for (var i=0; i<ITER_TIMES; i++) {
+          longChain = runRequest(longChain, i);
+        }
+        longChain();
+      }
+  };
+
   //2. admin
   describe('admin', function() {
     //2.1 post to admin for new
@@ -159,6 +195,8 @@ describe('server', function() {
   });
 
   describe('success events: redirects,actions', function() {
+    it('20 random requests should NOT bias redirect results', twentyAtATime(0.8));
+
     it('should 404 on bad domain/url', function(done) {
       request.get(baseUrl + '/r/200/evilsomethingelse.com/foo', function(err, response, body) {
         expect(response.statusCode).to.equal(404);
@@ -240,50 +278,9 @@ describe('server', function() {
       })
     });
 
-  
-    var twentyAtATime = function(threshold, finalRun, action) {
-      action = action || '/a/';
-      // Basically this runs too slowly to be in 2000ms timeout, so we'll do it a bunch
-      //  of times to inflate the results
-      return function(done) {
-        var ITER_TIMES = 20;
-        TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
-          return (baseUrl + action + i + '/' + URL_AB_NOHTTP);
-        });
-        var middlePart = '?absync=true&abid=';
-        var runRequest = function(after, i) {
-          return function () {
-            //console.log(i);
-            var trialChoice = ((Math.random() > threshold) ? 1 : 0);
-            request.get({
-              'url': TRIAL_REDIRECT_URLS[trialChoice]  + middlePart + parseInt(10000*Math.random()),
-              'followRedirect': false
-            }, after);
-          };
-        };
-        
-        var longChain = runRequest(function() {
-          if (finalRun) {
-            return finalRun(done);
-          } else {
-            done();
-          }
-        });
-        // hacky way to sequence runs -- SQLITE will suffer from locking issues
-        //   otherwise
-        for (var i=0; i<ITER_TIMES; i++) {
-          longChain = runRequest(longChain, i);
-        }
-        longChain();
-      }
-    };
-
-    it('20 requests should bias redirect results', twentyAtATime(0.8));
+    it('20 requests should bias redirect results', twentyAtATime(0.5));
     it('20 click requests will not bias results', twentyAtATime(0.1, false, '/r/'));
     it('20 click requests will not bias results', twentyAtATime(0.1, false, '/r/'));
-    it('20 requests should bias redirect results', twentyAtATime(0.8));
-    it('20 requests should bias redirect results', twentyAtATime(0.8));
-    it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
@@ -291,12 +288,12 @@ describe('server', function() {
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('should be biased toward the first trial', function(done) {
-          request.get(baseUrl + '/admin/reportjson/actions/' + TRIALS.join('-'), function(err, response, body) {
+          request.get(baseUrl + '/admin/reportjson/stats/' + TRIALS.join('-'), function(err, response, body) {
             var data = JSON.parse(body).results;
             for (var i=1;i<data.length;i++) {
               var end = data[data.length-i];
               if (end.trial == TRIALS[0]) {
-                expect(end.y > .5).to.equal(true);
+                expect(end.convertRate > .5).to.equal(true);
                 break;
               }
             }
