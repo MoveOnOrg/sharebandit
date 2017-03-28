@@ -243,9 +243,9 @@ var init = function(app, schema, sequelize, config) {
 
       var proto = config.domain_whitelist[req.params.domain].proto;
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
-      bandit(murl, sequelize, successMetric).then(function(trialChoice) {
-        var burl = app._shareUrl('', trialChoice);
-        return res.render('jsshare', {baseUrl: burl, abver: trialChoice});
+      bandit.choose(murl, sequelize, successMetric).then(function(trialChoice) {
+        var burl = app._shareUrl('', trialChoice.choice);
+        return res.render('jsshare', {baseUrl: burl, abver: trialChoice.choice});
       });
     };
   };

@@ -1,5 +1,6 @@
 var _ = require('lodash');
 var url = require('url');
+var bandit = require('./bandit.js');
 
 var init = function(app, schema, sequelize, adminauth, config, moduleLinks) {
 
@@ -164,74 +165,127 @@ app.post('/admin/delete/*',
 	}
 );
 
-var jsonQuery = function(isAction) {
-  var actionkey = (isAction ? 'action_count' : 'success_count');
+var jsonQuery = function(resultFunction) {
   return function (req, res) {
-    var data = {bandits: []}
-    schema.Sharer.findAll({
-      where: {
-        trial: req.params[0]
-      },
-      order: ['createdAt']
-    }).then(function(results) {
-      var successes = 0;
-      _.forEach (results, function(result, index) {
-        var d = result.dataValues;
-        if (d[actionkey] > 0) {
-          ++successes;
-        }
-        data.bandits.push({
-          time: result.dataValues.createdAt,
-          trial: result.dataValues.trial,
-          y: successes/(index+1)
-        });
-      });
-      res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.stringify(data.bandits));
-    });
-  };
-}
-
-var jsonQuerySelection = function() {
-  return function (req, res) {
-    var data = {bandits: []};
-    var allVariants = req.params.allvariants.split('-').filter(function(v) {
+    var data = [];
+    var allVariants = req.params[0].split('-').filter(function(v) {
       return v;
     });
-    var currentVariant = req.params.variant;
     schema.Sharer.findAll({
       where: {
         trial: {
-          $in: allVariants
+          $in: allVariants //req.params[0]
         }
       },
       order: ['createdAt']
     }).then(function(results) {
-
-      var totalTrials = 0;
-      var trialCount = 0;
-
-      _.forEach (results, function(result, index) {
-        totalTrials++;
-        var d = result.dataValues;
-        if (parseInt(d['trial']) === parseInt(currentVariant)) {
-          trialCount++
-        }
-        data.bandits.push({
-          time: result.dataValues.createdAt,
-          trial: currentVariant,
-          y: trialCount/totalTrials
-        });
-      });
-      res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.stringify(data.bandits));
+      resultFunction(results, allVariants, res)
     });
   };
 }
 
-app.get('/admin/datajson/*', adminauth, jsonQuery(false));
-app.get('/admin/actionjson/*', adminauth, jsonQuery(true));
-app.get('/admin/selectionjson/:allvariants/:variant/', adminauth, jsonQuerySelection());
+var successRate = function(isAction) {
+  var actionkey = (isAction ? 'action_count' : 'success_count');
+  return function(results, allVariants, res) {
+    var successes = 0;
+    var collectors = {};
+    var data = [];
+    allVariants.forEach(function(v) {
+      collectors[v] = {'successes':0, 'total':0}
+    });
+    _.forEach (results, function(result) {
+      var d = result.dataValues;
+      var c = collectors[d.trial];
+      if (d[actionkey] > 0) {
+        c.successes++
+      }
+      c.total++
+      data.push({
+        time: d.createdAt,
+        trial: d.trial,
+        y: c.successes/c.total
+      });
+    });
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({'results': data}));
+  };
+};
+
+var selectionRate = function(results, allVariants, res) {
+  var totalTrials = 0;
+  var collectors = {};
+  var data = [];
+  var actionkey = 'success';
+  allVariants.forEach(function(v) {
+    collectors[v] = {'total':0}
+  });
+  _.forEach (results, function(result, index) {
+    var d = result.dataValues;
+    if (d[actionkey] == 0) {
+      return;
+    }
+    totalTrials++
+    collectors[d.trial].total++
+    data.push({
+      time: d.createdAt,
+      trial: d.trial,
+      y: collectors[d.trial].total/totalTrials
+    });
+  });
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify({'results': data}));
+}
+
+var selectionSimulation = function(results, allVariants, res) {
+  var totalTrials = 0;
+  var trialCount = 0;
+  var collectors = {};
+  var data = [];
+  var actionkey = 'action';
+  allVariants.forEach(function(v) {
+    collectors[v] = {'trials':0, 'success': 0, 'trial': v}
+  });
+  _.forEach (results, function(result, index) {
+    var d = result.dataValues;
+    var c = collectors[d.trial];
+    c.trials++
+    if (d[actionkey] > 0) {
+      c.success++
+    }
+    // run simulation to check algo
+    var variants = Object.keys(collectors).map(function(v){
+      return collectors[v]
+    });
+    // choose 100 times and tally the results
+    simulationTally = {}
+    allVariants.map(function(v) {
+      simulationTally[v] = 0
+    });
+    rbetasLibrary = []
+    for (var i = 0; i <100; i++) {
+      bandit.chooseFromVariants(variants, function(choice, rbetas){
+        rbetasLibrary.push(rbetas);
+        simulationTally[choice]++;
+      }, null, 1);
+    }
+    for (var variant in simulationTally) {
+      data.push({
+          time: d.createdAt,
+          trial: variant,
+          y: simulationTally[variant]
+        });
+    }
+
+  });
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify({'results': data, 'rbetas': rbetasLibrary}));
+}
+
+
+app.get('/admin/reportjson/clicks/*', adminauth, jsonQuery(successRate(false)));
+app.get('/admin/reportjson/actions/*', adminauth, jsonQuery(successRate(true)));
+app.get('/admin/reportjson/selection/*', adminauth, jsonQuery(selectionRate));
+app.get('/admin/reportjson/simulation/*', adminauth, jsonQuery(selectionSimulation));
 app.get('/admin/report/*',
   adminauth,
   function (req, res) {

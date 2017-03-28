@@ -20,7 +20,7 @@ var bayesBandit = function(url, sequelize, successMetric) {
   //      rbeta is basically doing some logarithmic/exponent stuff
   //      but really only about ~5 per rbeta call, so it'll be pretty fast
   
-  var query = ('SELECT trial, count(Sharers.{{success_field}}_count > 0) AS success, count(key) AS trials'
+  var query = ('SELECT trial, sum(case when Sharers.{{success_field}}_count > 0 then 1 else 0 end) AS success, count(key) AS trials'
                  +' FROM Sharers'
                  +' JOIN Metadata on (Metadata.id = Sharers.trial)'
                  +' WHERE Metadata.url = ? GROUP BY trial')
@@ -62,38 +62,47 @@ var bayesBandit = function(url, sequelize, successMetric) {
             type: sequelize.QueryTypes.SELECT
           }
         )
-        .then(function(variants){
-          if (!variants || variants.length == 0) {
-            resolve(null);
-          };
-          var totalSuccess = variants.reduce(function(total, variant) {
-            return total + variant.success;
-          }, 0);
-          var uncompletedVariants = variants.filter(function(v) {
-            return v.success < 20;
-          });
-          if (uncompletedVariants.length
-              && totalSuccess < 100 * variants.length) {
-            var randomized = uncompletedVariants.sort(function() {
-              return 0.5 - Math.random();
-            });
-            resolve(randomized[0].trial);
-          } else {
-            var rbetas = variants.map(function(variant) {
-              return [
-                //returns array of rbetas
-                PD.rbeta(
-                  1, //number of results wanted
-                  (1*variant.success) + 1,
-                  (1*variant.trials) - (1*variant.success) + 1
-                )[0],
-                variant.trial
-              ];
-            }).sort().reverse();
-            resolve(rbetas[0][1]);
-          }
+        .then(function(variants) {
+          return chooseFromVariants(variants, resolve, reject, 1);
         });
     });
 };
 
-module.exports = bayesBandit;
+function chooseFromVariants(variants, resolve, reject, numResults) {
+  if (!variants || variants.length == 0) {
+    resolve(null);
+  };
+  var totalSuccess = variants.reduce(function(total, variant) {
+    return total + variant.success;
+  }, 0);
+  var uncompletedVariants = variants.filter(function(v) {
+    return v.success < 20;
+  });
+  if (uncompletedVariants.length
+      && totalSuccess < 100 * variants.length) {
+    var randomized = uncompletedVariants.sort(function() {
+      return 0.5 - Math.random();
+    });
+    resolve(randomized[0].trial);
+  } else {
+    var rbetas = variants.map(function(variant) {
+      var results = PD.rbeta(
+          numResults || 1, //number of results wanted
+          (1*variant.success) + 1,
+          (1*variant.trials) - (1*variant.success) + 1
+        );
+      return [
+        results[0],
+        variant.trial,
+        results
+      ];
+    }).sort().reverse();
+    resolve({choice: rbetas[0][1],
+             allResults: rbetas});
+  }
+}
+
+module.exports = {
+  choose: bayesBandit,
+  chooseFromVariants: chooseFromVariants
+};
