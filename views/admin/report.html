@@ -4,33 +4,40 @@
 <script src="https://www.gstatic.com/charts/loader.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
 <script type="text/javascript">
+    var trialVariants = [{% for i in variants %}"{{i.id}}",{%endfor%} 'aftercomma_discard' ]
+    trialVariants.pop();
+    var numVariants = trialVariants.length;
+
     google.charts.load('current', {'packages':['corechart']});
     google.charts.setOnLoadCallback(function() {
-         drawChart('chart_div_actions', 'actions');
-         drawChart('chart_div', 'clicks');
-         drawChart('chart_div_selection', 'selection');
-         if (/simulate=1/.test(document.location)) {
-         drawChart('chart_div_simulation', 'simulation', 100);
-         }
+      var jsonQuery = '';
+      if (/simulate=1/.test(document.location.search)) {
+        jsonQuery = '?simulate=1'
+      }
+      jQuery.getJSON('/admin/reportjson/actions/' + trialVariants.join('-') + jsonQuery).then(
+        function(response) {
+          drawChart('chart_div_actions', 'actions', response, 'convertRate');
+          drawChart('chart_div', 'clicks', response, 'clickRate');
+          drawChart('chart_div_selection', 'selection', response, 'convertSelectionRate');
+        });
+      if (/simulate=1/.test(document.location.search)) {
+        jQuery.getJSON('/admin/reportjson/simulation/' + trialVariants.join('-') + jsonQuery).then(
+          function(response) {
+            drawChart('chart_div_simulation', 'simulation', response, 'y', 100);
+          });
+      }
     });
 
-    function drawChart(targetElement, dataType, maxValue) {
+    function drawChart(targetElement, dataType, response, yKey, maxValue) {
       var data = new google.visualization.DataTable();
       data.addColumn('datetime', 'Time');
 
       var id_to_col = {};
-      var trialVariants = [{% for i in variants %}"{{i.id}}",{%endfor%} 'aftercomma_discard' ]
-      trialVariants.pop();
-      var numVariants = trialVariants.length;
       $(trialVariants).each(function(i) {
         data.addColumn('number', "Variant "+ this);
         id_to_col['id_'+this] = i;
       });
 
-      jQuery.getJSON('/admin/reportjson/'+dataType+'/{% for v in variants %}{{v.id}}-{%endfor%}',
-                     function(new_data){
-        return new_data;
-      }).then(function(response) {
         for (var tv=0; tv<numVariants; tv++) {
           // We have to iterate over the variants rather than
           // dumping them in a single order, so LineChart can realize it needs to 'start at the beginning'
@@ -43,7 +50,7 @@
             for (i=1; i <= numVariants; i++) {
               var key = 'id_' + row.trial
               if (i-1 === id_to_col[key]) {
-                create_row[i] = row.y;
+                create_row[i] = row[yKey];
               } else {
                 create_row[i] = null;
               }
@@ -76,10 +83,7 @@
           }
         }
       );
-        });
-
-
-      }
+    }
     </script>
 
 {% endblock %}

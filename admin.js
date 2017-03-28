@@ -190,19 +190,42 @@ var successRate = function(isAction) {
     var successes = 0;
     var collectors = {};
     var data = [];
+    var crossVariantCounts = {
+      'clicks': 0,
+      'converts': 0,
+    };
     allVariants.forEach(function(v) {
-      collectors[v] = {'successes':0, 'total':0}
+      collectors[v] = {
+        'clicks': 0,
+        'converts': 0,
+        'successes':0,
+        'total':0
+      };
     });
     _.forEach (results, function(result) {
-      var d = result.dataValues;
-      var c = collectors[d.trial];
-      if (d[actionkey] > 0) {
+      var dv = result.dataValues;
+      var c = collectors[dv.trial];
+      if (dv['action_count'] > 0) {
+        c.converts++
+        crossVariantCounts.converts++
+      }
+      if (dv['success_count'] > 0) {
+        c.clicks++
+        crossVariantCounts.clicks++
+      }
+      if (dv[actionkey] > 0) {
         c.successes++
       }
       c.total++
       data.push({
-        time: d.createdAt,
-        trial: d.trial,
+        'time': dv.createdAt,
+        'trial': dv.trial,
+        'totalClicks': c.clicks,
+        'totalConverts': c.converts,
+        'clickRate': c.clicks / c.total,
+        'convertRate': c.converts / c.total,
+        'clickSelectionRate': c.clicks / crossVariantCounts.clicks,
+        'convertSelectionRate': c.converts / crossVariantCounts.converts,
         y: c.successes/c.total
       });
     });
