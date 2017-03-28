@@ -26,13 +26,12 @@
           drawChart({'title': 'Variant selection rates for clicks'},
                     response, 'clickSelectionRate');
           drawChart({'title': 'Total converted shares by variant'},
-                    response, 'totalConverts', {
+                    response, 'trackingConverts', {
                       chartType: 'AreaChart',
                       additionalOptions: {
                         //Stacking fails because isStacked doesn't support interpolateNulls
                         // https://developers.google.com/chart/interactive/docs/gallery/areachart#stacking-areas
                         isStacked: 'absolute',
-                        interpolateNulls: true,
                         vAxis: {viewWindow:{min: 0}}
                       }
                     });
@@ -65,29 +64,38 @@
         id_to_col['id_'+this] = i;
       });
 
-        for (var tv=0; tv<numVariants; tv++) {
+      for (var tv=0; tv<numVariants; tv++) {
           // We have to iterate over the variants rather than
           // dumping them in a single order, so LineChart can realize it needs to 'start at the beginning'
           response.results.forEach(function(row) {
             var create_row = []
             create_row[0] = new Date(row.time);
-            if (row.trial != trialVariants[tv]) {
-              return; //this will do weird time-codey things
-            }
-            for (i=1; i <= numVariants; i++) {
-              var key = 'id_' + row.trial
-              if (i-1 === id_to_col[key]) {
-                if (row[yKey] === null) {
-                  return; //skip row
+            if (row[yKey] && row[yKey].length) {
+              //unusual: this is when we actually have row data for each column all at once
+              if (tv>0) {
+                return; //just one round for tracking rows
+              }
+              create_row.push.apply(create_row, row[yKey]);
+            } else {
+              //more common path: we just have one trial data point at a time
+              if (row.trial != trialVariants[tv]) {
+                return; //this will do weird time-codey things
+              }
+              for (i=1; i <= numVariants; i++) {
+                var key = 'id_' + row.trial
+                if (i-1 === id_to_col[key]) {
+                  if (row[yKey] === null) {
+                    return; //skip row
+                  }
+                  create_row[i] = row[yKey];
+                } else {
+                  create_row[i] = null;
                 }
-                create_row[i] = row[yKey];
-              } else {
-                create_row[i] = null;
               }
             }
             data.addRow(create_row);
           });
-        }
+      }
 
       var opts = {
         chartType: 'LineChart',
@@ -121,7 +129,6 @@
       if (opts.additionalOptions) {
         $.extend(googleChartOptions, opts.additionalOptions);
       }
-      console.log(googleChartOptions);
       new google.visualization[opts.chartType](targetElement).draw(data, googleChartOptions);
     }
     </script>

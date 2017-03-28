@@ -202,7 +202,7 @@ var variantReports = function(results, allVariants, res, req) {
     };
   });
   //basically just collectors as an array (for simulation)
-  var simVariants = Object.keys(collectors).map(function(v){
+  var simVariants = allVariants.map(function(v){
     return collectors[v]
   });
 
@@ -226,6 +226,9 @@ var variantReports = function(results, allVariants, res, req) {
       // different y-axis options:
       'totalClicks': tdata.clicks,
       'totalConverts': tdata.converts,
+      'trackingConverts': allVariants.map(function(v) {
+        return collectors[v].converts
+      }),
       'clickRate': tdata.clicks / tdata.trials,
       'convertRate': tdata.converts / tdata.trials,
       'clickSelectionRate': ((row['success_count'] > 0)
