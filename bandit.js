@@ -97,8 +97,7 @@ function chooseFromVariants(variants, resolve, reject, numResults) {
         results
       ];
     }).sort().reverse();
-    resolve({choice: rbetas[0][1],
-             allResults: rbetas});
+    resolve(rbetas[0][1]);
   }
 }
 
