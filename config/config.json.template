@@ -15,7 +15,6 @@
     "key": "",
     "domain": ""
   },
-  "extensionModules": ["./local_modules/supershare/supershare.js"],
   "oauth": {
     "clientId": "",
     "clientSecret": ""

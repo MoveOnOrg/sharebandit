@@ -19,13 +19,12 @@ The author/editor logs in to ShareBandit, adds a new URL to test, and several tr
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB2.png )
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB3.png )
 
-Author goes into your CMS/website system and marks the page  as "using ShareBandit". In our custom petition system, we tag a petition as "sharebandit" and in the petition system server logic, construct URLs pointing to share.moveon.org (where we have deployed sharebandit). The implementation of this step will be specific to the system that is using sharebandit.
-![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB4.png )
-![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB5.png )
+Assuming your tech folks have instrumented your CMS to use sharebandit (where use = your CMS's facebook share metadata points to your installation of the ShareBandit server), you may want to implement the ability to selectively use ShareBandit on a per-page basis. In our custom petition system, we use tags to enable / disable sharebandit on a per-petition basis. 
 
-When users share the page served by your CMS that has been instrumented by you to serve up share links from sharebandit, your share page gets one of the treatments you set up in sharebandit. In this example, our CMS is our petition system. So to demonstrate, we sign the test petition (the URL we load = the URL we added in ShareBandit admin), and on our petition system's thanks page, there is an option to share the petition.
+If you have done this, the author will need to mark the desired page as using sharebandit in your CMS. This step will be specific to the system that is using sharebandit.
 
-![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB6.png )
+When users share the page served by your CMS that has been instrumented by you to serve up share links from your installation of sharebandit, your share page gets one of the treatments you set up in sharebandit. In this example, our CMS is our petition system. So to demonstrate, we sign the test petition (the URL we load = the URL we added in ShareBandit admin), and on our petition system's thanks page, there is an option to share the petition.
+
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB7.png )
 
 Here our system has been instrumented to share the link https://share.moveon.org/r/0/petitions.moveon.org/sign/sharebandit-test and sharebandit takes this request and redirects to a particular treatment, like https://share.moveon.org/r/8/petitions.moveon.org/sign/sharebandit-test
@@ -44,6 +43,11 @@ Other users can then click on this link, are taken to our petition page, and if 
 
 Here's an example of how we make this callback on petition signature, using the abver and abid params passed into the petition page URL by the link that was posted on facebook:
 
+1. the sharebandit server shows a share metadata treatment that shows up in a user's facebook feed
+1. if a facebook user clicks this link it take them to the URL petitions.moveon.org/sign/sharebandit-test-petition?abid=$abid&abver=$abver
+1. on this petition page, if the member then signs the petition, we've instrumented our petition system to make the following callback to our sharebandit server, using the abver and abid params passed to it from facebook:
+
+
 ```perl
 http://share.moveon.org/a/$abver/$petition_share?abid=$abid
 ```
@@ -55,5 +59,4 @@ After the "success" callback has been made, you can navigate back to the shareba
 
 To add data points in this example, you need to sign this same petition again (with a different email address, in our system) to get a potentially different share treatment (remember that this is chosen at random at first):
 
-![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB15.png )
 ![](http://s3.amazonaws.com/s3.moveon.org/share_bandit_docs/SB16.png )
