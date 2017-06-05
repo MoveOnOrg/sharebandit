@@ -19,7 +19,7 @@ How to run locally:
 3. In the root of the app run `npm install` to get and install all packages
 
 4. Config base template
-   * `cp /config/config.json.template /config/config.json`
+   * `cp config/config.json.template config/config.json`
    * change "baseUrl" to e.g. "http://localhost:3000"
    * change "port" to e.g. 3000
    * add a secret string for "sessionSecret" key
