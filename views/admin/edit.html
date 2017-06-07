@@ -30,7 +30,28 @@
 <form action="{% if url %}/admin/edit/{{url}}{% else %}/admin/add/{% endif %}" method="post">
   <div class="form-group">
     <label>Page URL</label>
-    <input type="text" {% if url %}readonly {% endif %}class="form-control" name="url" value="{{url}}" />
+    <div class="input-group">
+      <input id="input-url" type="text" {% if url %}readonly {% endif %}class="form-control" name="url" value="{{url}}" />
+        <span class="input-group-btn">
+          <a class="btn btn-default" id="scrape" type="button" title="fetch the page and fill the variant">Scrape</a>
+          <script>
+            jQuery(function($) {
+              $('#scrape').click(function(){
+                $.getJSON("/admin/scrape/"+$("#input-url").val().replace(/(^\w+:|^)\/\//, ''),function(d){
+                  console.log(d);
+                  if (d.is_error) alert ("can't fetch the page: "+d.err.message);
+                  if (d.openGraph && d.openGraph.image) 
+                    $("input[name='image_url[new]']").val(d.openGraph.image.url);
+                  if (d.openGraph && d.openGraph.title) 
+                    $("input[name='headline[new]']").val(d.openGraph.title);
+                  if (d.general && d.general.description) 
+                    $("textarea[name='text[new]']").val(d.general.description);
+                });
+              });
+            });
+          </script>
+        </span>
+    </div>
   </div>
   {% if variants %}
     {% for variant in variants %}
