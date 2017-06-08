@@ -253,7 +253,28 @@ var init = function(app, schema, sequelize, config) {
   app.get('/js/:domain*', js_result('success'));
   app.get('/jsaction/:domain*', js_result('action'));
 
-  app.get('/json/:domain*', function (req, res) {
+  function json_result (successMetric) {
+    return function (req, res) {
+      if (! (req.params.domain in config.domain_whitelist)) {
+        return res.status(404).send("Not found");
+      }
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+      var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
+      bandit.choose(murl, sequelize, successMetric).then(function(trialChoice) {
+        schema.Metadata.findAll({where: {id: trialChoice}, plain:true, attributes: ['id', 'url', 'headline','text','image_url']}).then(function(results) {
+          var r= results.toJSON();
+          r.shareurl= app._shareUrl('', trialChoice) + murl;
+          return res.jsonp(r);
+        });
+      });
+    };
+  };
+
+  app.get('/json/:domain*', json_result('success'));
+  app.get('/jsonaction/:domain*', json_result('success'));
+
+  app.get('/jsonall/:domain*', function (req, res) {
     var params = {variants: []};
 
     //res.setHeader('Content-Type', 'application/json');
