@@ -253,6 +253,24 @@ var init = function(app, schema, sequelize, config) {
   app.get('/js/:domain*', js_result('success'));
   app.get('/jsaction/:domain*', js_result('action'));
 
+  app.get('/json/:domain*', function (req, res) {
+    var params = {variants: []};
+
+    //res.setHeader('Content-Type', 'application/json');
+    schema.Metadata.findAll({
+      where: {
+        url: req.params.domain + req.params[0]
+      }
+    }).then(function(results) {
+      _.forEach(results, function(result) {
+        params.url = result.dataValues.url;
+        result.dataValues.shareUrl = app._shareUrl(result.dataValues.url, result.dataValues.id);
+        params.variants.push(result.dataValues);
+      });
+      app.set('jsonp callback name', 'callback');
+      return res.jsonp (params);
+    });
+  });
 }
 
 module.exports = init;

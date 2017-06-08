@@ -1,6 +1,7 @@
 var _ = require('lodash');
 var url = require('url');
 var bandit = require('./bandit.js');
+var scrape = require('./lib/ogscraper.js');
 
 var init = function(app, schema, sequelize, adminauth, config, moduleLinks) {
 
@@ -283,6 +284,19 @@ app.get('/admin/report/*',
       res.render('admin/report', params);
       });
     });
+app.get('/admin/scrape/*',
+  adminauth, 
+  function (req,res) {
+    scrape(req.params[0])
+      .then (function (og) {
+        res.json(og);
+      })
+      .catch (function (err) {
+        console.log (err);
+        res.json ({is_error:1,err:err});
+      });
+  });
+
 }
 
 module.exports = init;
