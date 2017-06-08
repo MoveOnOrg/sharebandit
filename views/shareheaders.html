@@ -8,6 +8,10 @@
     {% for prop in extraProperties %}
     <meta property="{{prop.name}}" content="{{prop.value}}" />
     {% endfor %}
+    {% for prop in extraMeta %}
+    <meta name="{{prop.name}}" content="{{prop.value}}" />
+    {% endfor %}
+
 
   </head>
   <body></body>

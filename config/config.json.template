@@ -29,6 +29,11 @@
   "domain_whitelist": {
     "petitions.moveon.org": {
       "proto": "http"
+       "extraMeta": [
+          {"name": "twitter:card", "value": "summary_large_image"},
+          {"name": "twitter:site", "value": "@moveon"},
+          {"name": "twitter:creator", "value": "@moveon"}
+       ]},
     }
   }
 }

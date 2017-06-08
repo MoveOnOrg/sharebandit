@@ -48,10 +48,9 @@ var init = function(app, schema, sequelize, config) {
               'query': forwardedQuery
             });
 
-            /// 1. Am I Facebook Crawler?
+            /// 1. Am I Facebook Crawler or TwitterBot?
             //https://developers.facebook.com/docs/sharing/webmasters/crawler
-            if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.params.abver)) {
-
+            if (/facebookexternalhit|Facebot|Twitterbot/.test(req.get('User-Agent')) && parseInt(req.params.abver) ) {
               //What does FB do if you send it a 302 (temporary redirect)?
               // will it try to visit it again and get a different 302 if visiting again, or will it just
               // cache it?
@@ -66,6 +65,7 @@ var init = function(app, schema, sequelize, config) {
                   if (/testshare/.test(pathname)) {
                     res.render('shareheaders', {
                       'extraProperties': domainInfo.extraProperties || [],
+                      'extraMeta': domainInfo. extraMeta || [],
                       'title': "Fooooo",
                       'description': 'basdfasdf',
                     });
@@ -77,6 +77,7 @@ var init = function(app, schema, sequelize, config) {
                   var renderFacebook = function() {
                     res.render('shareheaders', {
                       'extraProperties': domainInfo.extraProperties || [],
+                      'extraMeta': domainInfo. extraMeta || [],
                       'title': trial.headline,
                       'description': trial.text,
                       'image': trial.image_url,
