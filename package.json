@@ -3,9 +3,6 @@
   "version": "0.8.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "test": "node_modules/.bin/istanbul test node_modules/.bin/_mocha -- tests/index.js"
-  },
   "author": "",
   "license": "GPLv2+",
   "devDependencies": {
@@ -39,6 +36,7 @@
     "accountId": "756917843633"
   },
   "scripts": {
+    "test": "node_modules/.bin/istanbul test node_modules/.bin/_mocha -- tests/index.js",
     "start": "node index.js",
     "config": "node ./scripts/configure.js",
     "deconfig": "node ./scripts/deconfigure.js",
