@@ -101,10 +101,10 @@ var boot = function(config) {
             res.redirect('/admin/');
           }
          );
-  server = app.listen(config.port, function () {
-    var port = server.address().port;
-    console.log('App listening at %s:%s', config.baseUrl, port);
-  });
+  // server = app.listen(config.port, function () {
+  //   var port = server.address().port;
+  //   console.log('App listening at %s:%s', config.baseUrl, port);
+  // });
 }
 
 if (require.main === module) {
@@ -115,3 +115,5 @@ if (require.main === module) {
   exports.db = dbconn;
   exports.shutdown = shutdown;
 }
+
+module.exports = app
