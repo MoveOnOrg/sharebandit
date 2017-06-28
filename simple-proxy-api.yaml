@@ -19,7 +19,7 @@ paths:
         responses:
           default:
             statusCode: 200
-        uri: arn:aws:apigateway:us-west-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-1:756917843633:function:SharebanditLambdaProd/invocations
+        uri: arn:aws:apigateway:us-west-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-1:756917843633:function:SharebanditLambdaProdStack-SharebanditLambdaProd-DHKBNKS6MXYD/invocations
         passthroughBehavior: when_no_match
         httpMethod: POST
         type: aws_proxy
@@ -63,7 +63,7 @@ paths:
         type: string
       responses: {}
       x-amazon-apigateway-integration:
-        uri: arn:aws:apigateway:us-west-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-1:756917843633:function:SharebanditLambdaProd/invocations
+        uri: arn:aws:apigateway:us-west-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-1:756917843633:function:SharebanditLambdaProdStack-SharebanditLambdaProd-DHKBNKS6MXYD/invocations
         httpMethod: POST
         type: aws_proxy
     options:
