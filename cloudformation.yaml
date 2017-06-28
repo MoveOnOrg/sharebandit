@@ -50,6 +50,15 @@ Resources:
             Action:
             - execute-api:Invoke
             Resource: arn:aws:execute-api:*:*:*  
+          - Effect: Allow
+            Action: 
+            - logs:CreateLogGroup
+            Resource: arn:aws:logs:us-west-1:756917843633:*
+          - Effect: Allow
+            Action: 
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:us-west-1:756917843633:log-group:arn:aws:lambda:us-west-1:756917843633:function:SharebanditLambdaProdStack-SharebanditLambdaProd-DHKBNKS6MXYD:*
 
   LambdaApiGatewayExecutionPermission:
     Type: AWS::Lambda::Permission
@@ -89,13 +98,13 @@ Resources:
             RestApiId: !Ref ApiGatewayApi
             Path: /{proxy+}
             Method: ANY
-    VpcConfig:
-      SecurityGroupIds:
-        - sg-49693d2d
-      SubnetIds:
-        - subnet-095cfe6c
-        - subnet-cefc1e97
-
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-49693d2d
+        SubnetIds:
+          - subnet-095cfe6c
+          - subnet-cefc1e97
+          - subnet-d8385681
 
 Outputs:
   LambdaFunctionConsoleUrl:

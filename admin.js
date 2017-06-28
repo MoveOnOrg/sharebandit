@@ -1,3 +1,4 @@
+console.log('admin.js');
 var _ = require('lodash');
 var url = require('url');
 var bandit = require('./bandit.js');

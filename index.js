@@ -98,7 +98,10 @@ var boot = function(config) {
 
   app.get('/',
           adminauth,  function (req, res) {
-            res.redirect('/admin/');
+            // res.redirect('/admin/');
+            console.log('Hello world');
+            res.writeHead(200, {'Content-Type': 'text/html'});
+            res.end('Hello World!');
           }
          );
   // server = app.listen(config.port, function () {
