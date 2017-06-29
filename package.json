@@ -20,6 +20,7 @@
     "swig": "^1.4.2"
   },
   "dependencies": {
+    "base-64": "^0.1.0",
     "body-parser": "^1.15.0",
     "express-session": "^1.13.0",
     "googleapis": "^2.1.7",
