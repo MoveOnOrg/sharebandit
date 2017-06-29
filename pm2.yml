@@ -1,3 +1,4 @@
+# run: pm2 start pm2.yml --env production
 apps:
   - script   : ./index.js
     name     : 'sharebandit'
