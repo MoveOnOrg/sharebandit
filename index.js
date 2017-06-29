@@ -66,7 +66,8 @@ var boot = function(config) {
   var public_views = require('./public.js')(app, schema, sequelize, config);
 
   var adminauth;
-  if (/\/\/localhost/.test(config.baseUrl) && config.develMode) {
+  //if (/\/\/localhost/.test(config.baseUrl) && config.develMode) {
+  if (config.develMode) {
     adminauth = function(req,res,next) {next();};
   } else {
     var oauth2Client = new OAuth2(
