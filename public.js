@@ -3,6 +3,7 @@ var _ = require('lodash');
 var bandit = require('./bandit.js');
 var Promise = require("bluebird");
 var Sequelize = require('sequelize');
+var shorturl = require('./lib/shorturl.js');
 
 var init = function(app, schema, sequelize, config) {
 
@@ -263,7 +264,7 @@ var init = function(app, schema, sequelize, config) {
 
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
       bandit.choose(murl, sequelize, successMetric).then(function(trialChoice) {
-        schema.Metadata.findAll({where: {id: trialChoice}, plain:true, attributes: ['id', 'url', 'headline','text','image_url']}).then(function(results) {
+        schema.Metadata.findOne({where: {id: trialChoice}, plain:true, attributes: ['id', 'url', 'headline','text','image_url']}).then(function(results) {
           var r= results.toJSON();
           r.shareurl= app._shareUrl('', trialChoice) + murl;
           return res.jsonp(r);
