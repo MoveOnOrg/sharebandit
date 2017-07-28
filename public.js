@@ -253,7 +253,7 @@ var init = function(app, schema, sequelize, config) {
   app.get('/js/:domain*', js_result('success'));
   app.get('/jsaction/:domain*', js_result('action'));
 
-  function json_result (successMetric) {
+  var json_result = function (successMetric) {
     return function (req, res) {
       if (! (req.params.domain in config.domain_whitelist)) {
         return res.status(404).send("Not found");
