@@ -77,3 +77,9 @@ on Ubuntu systems.
 1. Run (or run the commands yourself) nginx/install.sh as root
 2. Copy the sharebandit.conf file to /etc/nginx/sites-enabled/
 3. Install your SSL certificates at /etc/nginx/cert.* (or modify sharebandit.conf to map your server layout)
+
+## How to run in production
+
+if you haven't already, install pm2
+$sudo npm install pm2 --global
+pm2 pm2.yml --env production

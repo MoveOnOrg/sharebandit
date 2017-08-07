@@ -59,12 +59,16 @@ This URL actually returns a <a href="http://probablyprogramming.com/2009/03/15/t
    This will trigger the share links' content based on action conversions rather than clicks.
 
 
-## api to get the list of variants
+## api
 
 If you display the share block before a user takes an action (eg. with speakout) you can't only fetch the js that will set your fb share url, but you need to fetch the data matching that variant to be able to display the title, description and image
 
-a new api  
+2 apis select a variant and returns the raw data (optimizing for click or actions, as described above):
 
     {{YOUR_SHAREBANDIT_URL}}/json/{{URL_FOR_PAGE WITHOUT PROTOCOL}}
+    {{YOUR_SHAREBANDIT_URL}}/jsonaction/{{URL_FOR_PAGE WITHOUT PROTOCOL}}
 
-returns a json, and if you add a ?callback=xyz (in jQuery, you can leave xyz empty and it will generate a random one), it returns a jsonp
+it returns json, and if you add a ?callback=xyz (in jQuery, you can leave xyz empty and it will generate a random one), it returns a jsonp
+
+    {{YOUR_SHAREBANDIT_URL}}/jsonall/{{URL_FOR_PAGE WITHOUT PROTOCOL}}
+This does return the list of all the existing variants, without selecting any
