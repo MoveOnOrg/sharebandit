@@ -1,16 +1,15 @@
+var configFile;
 if (process.env.CONFIG) {
-  var configFile = JSON.parse(process.env.CONFIG);
+  configFile = JSON.parse(process.env.CONFIG);
 } else {
-  var configFile = require('./config/config.json');
+  configFile = require('./config/config.json');
 }
 
-var _ = require('lodash');
 var express = require('express');
 var app = express();
 var session = require('express-session');
 var bodyParser = require('body-parser');
 var google = require('googleapis');
-var url = require('url');
 var OAuth2 = google.auth.OAuth2;
 var googleAuth = require('./lib/google-auth');
 var swig  = require('swig');
@@ -21,12 +20,11 @@ var server;
 
 var shutdown = function() {
   server.close();
-}
+};
 
 // Launch server.
 var boot = function(config) {
   if (!config) {
-    console.log('loading config from config/config.json');
     config = configFile;
   }
 
@@ -50,7 +48,6 @@ var boot = function(config) {
     });
     modules.forEach(function(m) {
       if (m.static) {
-        console.log(m.static);
         app.use(express.static(m.static));
       }
     });
@@ -75,18 +72,18 @@ var boot = function(config) {
       config.baseUrl + '/auth/google/callback'
     );
     adminauth = (googleAuth({'oauth2Client': oauth2Client,
-                             'app': app,
-                             'whitelist': config.oauthAllowedUsers
-                            }).confirm);
+      'app': app,
+      'whitelist': config.oauthAllowedUsers
+    }).confirm);
   }
   var view_dirs = [__dirname + '/views'];
   //MODULES
   // get the links that will be available in the admin
   //  -- all other views, the module should setup itself
   var moduleLinks = modules.map(function(m) {
-      var moduleResult = m(app, schema, sequelize, adminauth, config);
-      view_dirs.push(moduleResult.viewDirectory);
-      return moduleResult.link;
+    var moduleResult = m(app, schema, sequelize, adminauth, config);
+    view_dirs.push(moduleResult.viewDirectory);
+    return moduleResult.link;
   });
 
   app.set('views', view_dirs);
@@ -97,15 +94,12 @@ var boot = function(config) {
   var admin_views = require('./admin.js')(app, schema, sequelize, adminauth, config, moduleLinks);
 
   app.get('/',
-          adminauth,  function (req, res) {
-            res.redirect('/admin/');
-          }
-         );
-  server = app.listen(config.port, function () {
-    var port = server.address().port;
-    console.log('App listening at %s:%s', config.baseUrl, port);
-  });
-}
+    adminauth,  function (req, res) {
+      res.redirect('/admin/');
+    }
+  );
+  server = app.listen(config.port);
+};
 
 if (require.main === module) {
   boot(configFile);
