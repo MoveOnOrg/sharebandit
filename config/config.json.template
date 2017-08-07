@@ -2,8 +2,8 @@
   "db" : {
     "dialect": "postgres",
     "port": 5432,
-    "user": "sharebandit",
-    "pass": "sharebandit",
+    "username": "sharebandit",
+    "password": "sharebandit",
     "database": "sharebandit"
   },
   "db<if you're using sqlite>": {
