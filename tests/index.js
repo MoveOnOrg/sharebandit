@@ -46,9 +46,11 @@ describe('server', function() {
       }
     }, true);
     try {
-      app.db.schema.Sharer.destroy({truncate:true});
-      app.db.schema.Bandit.destroy({truncate:true});
-      app.db.schema.Metadata.destroy({truncate:true});
+      app.db.schema.Sharer.destroy({truncate:true}).catch(function(){
+        //ignore failure which can happen if the db wasn't created yet
+      });
+      app.db.schema.Bandit.destroy({truncate:true}).catch(function(){});
+      app.db.schema.Metadata.destroy({truncate:true}).catch(function(){});
     } catch(e) {
       //empty db, so proceed and will get created
     }

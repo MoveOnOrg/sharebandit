@@ -67,6 +67,8 @@ var boot = function(config, startOnPort) {
   var sequelize = new Sequelize(db.database, db.user, db.pass, db);
   var schema = require('./schema.js')(sequelize);
   dbconn.schema = schema;
+  sequelize.authenticate();
+  dbconn.ready = sequelize.sync()
 
   //VIEWS
   var public_views = require('./public.js')(app, schema, sequelize, config);
@@ -98,9 +100,6 @@ var boot = function(config, startOnPort) {
   });
 
   app.set('views', view_dirs);
-
-  sequelize.authenticate();
-  sequelize.sync();
 
   var admin_views = require('./admin.js')(app, schema, sequelize, adminauth, config, moduleLinks);
 
