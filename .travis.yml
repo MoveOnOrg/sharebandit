@@ -1,0 +1,11 @@
+language: node_js
+node_js:
+  - "6.1"
+
+notifications:
+  slack:
+    rooms:
+      - moveonorg:57bdH2pUn2hngi1FR9Mlk5sR#tech-team
+    on_success: always
+    on_failure: always
+    on_start: never

@@ -6,7 +6,6 @@ if (process.env.CONFIG) {
 
 var _ = require('lodash');
 var express = require('express');
-var app = express();
 var session = require('express-session');
 var bodyParser = require('body-parser');
 var google = require('googleapis');
@@ -24,7 +23,8 @@ var shutdown = function() {
 }
 
 // Launch server.
-var boot = function(config) {
+var boot = function(config, startOnPort) {
+  var app = express();
   if (!config) {
     console.log('loading config from config/config.json');
     config = configFile;
@@ -103,17 +103,22 @@ var boot = function(config) {
             res.redirect('/admin/');
           }
          );
-  server = app.listen(config.port, function () {
-    var port = server.address().port;
-    console.log('App listening at %s:%s', config.baseUrl, port);
-  });
+  if (startOnPort && config.port) {
+    server = app.listen(config.port, function () {
+      var port = server.address().port;
+      if (require.main === module) {
+        console.log('App listening at %s:%s', config.baseUrl, port);
+      }
+    });
+  }
 }
 
 if (require.main === module) {
-  boot(configFile);
+  boot(configFile, true);
 } else {
   exports.server = server;
   exports.boot = boot;
   exports.db = dbconn;
   exports.shutdown = shutdown;
+  exports.app = boot(configFile);
 }
