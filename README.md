@@ -14,7 +14,7 @@ How to run locally:
 
 1. `git clone https://github.com/MoveOnOrg/sharebandit.git`
 
-2. Install node, on Linux: `sudo apt-get install node` and on MacOS `brew install node` (or use nvm, whatever you prefer)
+2. Install node, on Linux: `sudo apt-get install node` and on MacOS `brew install node` (or use nvm, whatever you prefer). Sharebandit uses Node.js version 4.8.1.
 
 3. In the root of the app run `npm install` to get and install all packages
 
