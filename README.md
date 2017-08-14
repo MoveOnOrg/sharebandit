@@ -65,7 +65,7 @@ How to run (after installing node):
 How to run tests :
 ------------------
 
-   `npm test`
+   `npm run test`
 
 How to Install in Production:
 -----------------------------
