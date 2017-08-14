@@ -68,6 +68,8 @@ var boot = function(config) {
   var adminauth;
   if (/\/\/localhost/.test(config.baseUrl) && config.develMode) {
     adminauth = function(req,res,next) {next();};
+  } else if (config.adminAuth) {
+    adminauth = require(config.adminAuth)(app, config);
   } else {
     var oauth2Client = new OAuth2(
       config.oauth.clientId,
