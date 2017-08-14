@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/MoveOnOrg/sharebandit.svg?token=UEwQsk9795wqB8A8Wyzm&branch=master)](https://travis-ci.com/MoveOnOrg/sharebandit)
+[![Build Status](https://travis-ci.org/MoveOnOrg/sharebandit.svg?branch=master)](https://travis-ci.org/MoveOnOrg/sharebandit)
 
 ShareBandit
 ===========
