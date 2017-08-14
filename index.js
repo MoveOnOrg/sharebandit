@@ -1,7 +1,13 @@
+var configFile;
 if (process.env.CONFIG) {
-  var configFile = JSON.parse(process.env.CONFIG);
+  configFile = JSON.parse(process.env.CONFIG);
 } else {
-  var configFile = require('./config/config.json');
+  var fs = require('fs');
+  try {
+    configFile = JSON.parse(fs.readFileSync('./config/config.json', 'utf8'));
+  } catch (err) {
+    configFile = {}
+  }
 }
 
 var _ = require('lodash');
