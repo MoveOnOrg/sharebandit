@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/MoveOnOrg/sharebandit.svg?token=UEwQsk9795wqB8A8Wyzm&branch=master)](https://travis-ci.com/MoveOnOrg/sharebandit)
+
 ShareBandit
 ===========
 
