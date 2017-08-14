@@ -44,7 +44,7 @@ describe('server', function() {
                          ]
                        }
       }
-    });
+    }, true);
     try {
       app.db.schema.Sharer.destroy({truncate:true});
       app.db.schema.Bandit.destroy({truncate:true});
