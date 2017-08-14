@@ -126,5 +126,5 @@ if (require.main === module) {
   exports.boot = boot;
   exports.db = dbconn;
   exports.shutdown = shutdown;
-  exports.app = boot(configFile);
+  //exports.app = boot(configFile);
 }
