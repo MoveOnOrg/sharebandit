@@ -6,6 +6,7 @@ if (process.env.CONFIG) {
   try {
     configFile = JSON.parse(fs.readFileSync(process.env.CONFIGFILE || './config/config.json', 'utf8'));
   } catch (err) {
+    console.log('FAILED to load config file', err)
     configFile = false
   }
 }
@@ -32,7 +33,7 @@ var shutdown = function() {
 var boot = function(config, startOnPort) {
   var app = express();
   if (!config) {
-    console.log('loading config from config/config.json');
+    console.log('loading config from file: ', configFile);
     config = configFile;
   }
 
