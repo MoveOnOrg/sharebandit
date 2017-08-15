@@ -122,6 +122,7 @@ var boot = function(config, startOnPort) {
       }
     });
   }
+  return app
 }
 
 if (require.main === module) {
@@ -131,5 +132,5 @@ if (require.main === module) {
   exports.boot = boot;
   exports.db = dbconn;
   exports.shutdown = shutdown;
-  //exports.app = boot(configFile);
+  exports.app = boot(configFile);
 }
