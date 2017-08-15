@@ -1,4 +1,6 @@
-config.json
+config/config.json
+config/lambda.json
+claudia.json
 nginx/htpasswd
 *~
 #*

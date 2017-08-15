@@ -4,7 +4,7 @@ if (process.env.CONFIG) {
 } else {
   var fs = require('fs');
   try {
-    configFile = JSON.parse(fs.readFileSync('./config/config.json', 'utf8'));
+    configFile = JSON.parse(fs.readFileSync(process.env.CONFIGFILE || './config/config.json', 'utf8'));
   } catch (err) {
     configFile = {}
   }
@@ -36,12 +36,18 @@ var boot = function(config, startOnPort) {
     config = configFile;
   }
 
-  // Configure Express app
-  app.use(session({
+  var sessionConfig = {
     secret: config.sessionSecret,
     resave: true,
     saveUninitialized: false
-  }));
+  }
+  if (config.redisSessionStore) {
+    var RedisStore = require('connect-redis')(session);
+    sessionConfig['store'] = new RedisStore(config.redisSessionStore);
+  }
+
+  // Configure Express app
+  app.use(session(sessionConfig));
   app.use(express.static(__dirname + '/public'));
   app.use(bodyParser.urlencoded({ extended: true }));
   app.engine('html', swig.renderFile);

@@ -18,6 +18,7 @@
   "dependencies": {
     "aws-serverless-express": "^3.0.2",
     "body-parser": "^1.15.0",
+    "connect-redis": "^3.3.0",
     "express": "^4.13.4",
     "express-session": "^1.13.0",
     "googleapis": "^2.1.7",
