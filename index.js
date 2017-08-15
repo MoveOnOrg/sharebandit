@@ -6,7 +6,7 @@ if (process.env.CONFIG) {
   try {
     configFile = JSON.parse(fs.readFileSync(process.env.CONFIGFILE || './config/config.json', 'utf8'));
   } catch (err) {
-    configFile = {}
+    configFile = false
   }
 }
 
@@ -132,5 +132,7 @@ if (require.main === module) {
   exports.boot = boot;
   exports.db = dbconn;
   exports.shutdown = shutdown;
-  exports.app = boot(configFile);
+  if (configFile) {
+    exports.app = boot(configFile);
+  }
 }
