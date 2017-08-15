@@ -1,7 +1,13 @@
+var configFile;
 if (process.env.CONFIG) {
-  var configFile = JSON.parse(process.env.CONFIG);
+  configFile = JSON.parse(process.env.CONFIG);
 } else {
-  var configFile = require('./config/config.json');
+  var fs = require('fs');
+  try {
+    configFile = JSON.parse(fs.readFileSync('./config/config.json', 'utf8'));
+  } catch (err) {
+    configFile = {}
+  }
 }
 
 var _ = require('lodash');
@@ -61,6 +67,8 @@ var boot = function(config, startOnPort) {
   var sequelize = new Sequelize(db.database, db.user, db.pass, db);
   var schema = require('./schema.js')(sequelize);
   dbconn.schema = schema;
+  sequelize.authenticate();
+  dbconn.ready = sequelize.sync()
 
   //VIEWS
   var public_views = require('./public.js')(app, schema, sequelize, config);
@@ -93,9 +101,6 @@ var boot = function(config, startOnPort) {
 
   app.set('views', view_dirs);
 
-  sequelize.authenticate();
-  sequelize.sync();
-
   var admin_views = require('./admin.js')(app, schema, sequelize, adminauth, config, moduleLinks);
 
   app.get('/',
@@ -120,5 +125,5 @@ if (require.main === module) {
   exports.boot = boot;
   exports.db = dbconn;
   exports.shutdown = shutdown;
-  exports.app = boot(configFile);
+  //exports.app = boot(configFile);
 }
