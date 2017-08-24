@@ -5,14 +5,18 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Share.MoveOn.org</title>
+  <title>ShareBandit</title>
   <meta http-equiv="X-UA-Compatible" content="IE=edge;chrome=1">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="google-signin-client_id" content="523711024372-j0carp0rkmmthrlkrvi0rqgnri35q83u.apps.googleusercontent.com">
-  <link rel="apple-touch-icon" href="//s3.amazonaws.com/s3.moveon.org/images/with_dims/moveon_iphone_icon_57x57.png"/>
-  <link rel="shortcut icon" href="//s3.amazonaws.com/s3.moveon.org/favicon.ico" />
-  <link href="//s3.amazonaws.com/actionkit.moveon.org/static/stylesheets/site.css" rel="stylesheet" />
-  <script src="/js/jquery.min.js"></script>
+  {% if env.googleClientId %}
+  <meta name="google-signin-client_id" content="{{env.googleClientId}}">
+  {% endif %}
+  <link rel="apple-touch-icon" href="{{env.staticBaseUrl}}/images/with_dims/moveon_iphone_icon_57x57.png"/>
+  <link rel="shortcut icon" href="{{env.staticBaseUrl}}/favicon.ico" />
+  <link href="{{env.staticBaseUrl}}/static/stylesheets/site.css" rel="stylesheet" />
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js"
+	  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+	  crossorigin="anonymous"></script>
   {% block head %}{% endblock %}
 </head>
 <body role="document">
@@ -22,7 +26,7 @@
       <div class="col-md-12">
         <div class="navbar-header">
           <a class="navbar-brand" href="/"></a>
-          <img height="80" src="/img/bandito.png" alt="Share Bandit Logo" />
+          <img height="80" src="{{env.staticBaseUrl}}/img/bandito.png" alt="Share Bandit Logo" />
         </div>
         <ul class="nav navbar-nav navbar-right">
           {% for m in modules %}
@@ -46,10 +50,7 @@
     <div class="row">
       <div class="col-md-8">
         <p class="small">
-          A website of MoveOn.org Civic Action.
-        </p>
-        <p class="small">
-          <a href="http://civic.moveon.org/">MoveOn.org Civic Action</a> is a 501(c)(4) organization which primarily focuses on nonpartisan education and advocacy on important national issues. <a href="http://pol.moveon.org/">MoveOn.org Political Action</a> is a federal political committee which primarily helps members elect candidates who reflect our values through a variety of activities aimed at influencing the outcome of the next election. MoveOn.org Political Action and MoveOn.org Civic Action are separate organizations.
+          Sharebandit was created by <a href="http://front.moveon.org/">MoveOn.org</a>
         </p>
       </div>
     </div>

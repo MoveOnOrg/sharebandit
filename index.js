@@ -4,9 +4,10 @@ if (process.env.CONFIG) {
 } else {
   var fs = require('fs');
   try {
-    configFile = JSON.parse(fs.readFileSync('./config/config.json', 'utf8'));
+    configFile = JSON.parse(fs.readFileSync(process.env.CONFIGFILE || './config/config.json', 'utf8'));
   } catch (err) {
-    configFile = {}
+    console.log('FAILED to load config file', err)
+    configFile = false
   }
 }
 
@@ -32,16 +33,22 @@ var shutdown = function() {
 var boot = function(config, startOnPort) {
   var app = express();
   if (!config) {
-    console.log('loading config from config/config.json');
+    console.log('loading config from file: ', configFile);
     config = configFile;
   }
 
-  // Configure Express app
-  app.use(session({
+  var sessionConfig = {
     secret: config.sessionSecret,
     resave: true,
     saveUninitialized: false
-  }));
+  }
+  if (config.redisSessionStore) {
+    var RedisStore = require('connect-redis')(session);
+    sessionConfig['store'] = new RedisStore(config.redisSessionStore);
+  }
+
+  // Configure Express app
+  app.use(session(sessionConfig));
   app.use(express.static(__dirname + '/public'));
   app.use(bodyParser.urlencoded({ extended: true }));
   app.engine('html', swig.renderFile);
@@ -116,6 +123,7 @@ var boot = function(config, startOnPort) {
       }
     });
   }
+  return app
 }
 
 if (require.main === module) {
@@ -125,5 +133,7 @@ if (require.main === module) {
   exports.boot = boot;
   exports.db = dbconn;
   exports.shutdown = shutdown;
-  //exports.app = boot(configFile);
+  if (configFile) {
+    exports.app = boot(configFile);
+  }
 }
