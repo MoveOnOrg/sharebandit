@@ -1,4 +1,5 @@
 config/config.json
+config/lambda.json
 claudia.json
 nginx/htpasswd
 *~
@@ -11,3 +12,4 @@ node_modules/**
 npm-debug.log
 /.env
 local_modules
+package-lock.json
