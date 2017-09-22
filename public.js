@@ -50,18 +50,17 @@ var init = function(app, schema, sequelize, config) {
 
             /// 1. Am I Facebook Crawler?
             //https://developers.facebook.com/docs/sharing/webmasters/crawler
-            if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.params.abver)) {
+            if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.params.abver) >= 0 ) {
 
               //What does FB do if you send it a 302 (temporary redirect)?
               // will it try to visit it again and get a different 302 if visiting again, or will it just
               // cache it?
               // If it DOES redirect each time, then /0/ could choose by bandit, itself
 
-              var murl = (req.params.domain + decodeURIComponent(pathname || '/'));
+              var murl = (req.params.domain + decodeURIComponent(pathname || '/').replace(/.fb\d+/,''));
               schema.Metadata.findOne({
-                'where': { 'url':murl.replace(/.fb\d+/,''), 'id':parseInt(req.params.abver)}
+                'where': { 'url':murl, 'id':parseInt(req.params.abver)}
               }).then(function(trial) {
-                //maybe this part should go down by 'function failure'?
                 if (!trial) {
                   if (/testshare/.test(pathname)) {
                     res.render('shareheaders', {
@@ -69,6 +68,22 @@ var init = function(app, schema, sequelize, config) {
                       'title': "Fooooo",
                       'description': 'basdfasdf',
                     });
+                  } else if (req.params.abver == '0') {
+                    bandit.getUrlTrials(murl, sequelize, 'action', function(variants, resolve, reject, numResults) {
+                      schema.Metadata.findOne({
+                        'where': { 'url':murl },
+                        'order': [[ 'success_count', 'DESC' ]],
+                        'limit': 1
+                      }).then(function(bestTrial) {
+                        res.render('shareheaders', {
+                          'extraProperties': domainInfo.extraProperties || [],
+                          'title': bestTrial.headline,
+                          'description': bestTrial.text,
+                          'image': bestTrial.image_url,
+                          'fullUrl': config.baseUrl + req.originalUrl
+                        });
+                      });
+                    })
                   } else {
                     return res.status(404).send("Not found");
                   }
