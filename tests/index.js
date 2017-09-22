@@ -206,7 +206,7 @@ describe('server', function() {
       })
     });
 
-    it('facebook should redirect to best treatment when sent a share URL with no abver value', function(done) {
+    it('should render metadata for best treatment on sharebandit url with no trial id', function(done) {
       request.get({
         'url': baseUrl + '/r/0/'+URL_AB_NOHTTP+'/NO_testshare_URL_HERE?abid=1',
         'followRedirect': false,
@@ -214,7 +214,13 @@ describe('server', function() {
           'User-Agent': "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
         }
       }, function(err, response, body) {
-        expect(response.statusCode).to.equal(200);
+        if (body) {
+          expect(response.statusCode).to.equal(200);
+          expect(/property="og:title"/.test(body)).to.equal(true);
+          expect(/property="og:description"/.test(body)).to.equal(true);
+        } else {
+          expect(response.statusCode).to.equal(404);
+        }
         done();
       })
     });
