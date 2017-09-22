@@ -64,22 +64,24 @@ var init = function(app, schema, sequelize, config) {
                       'description': 'basdfasdf',
                     });
                   } else if (req.params.abver == '0') {
-                    // if facebook is sent a 302, redirect it to top performing treatment
-                    bandit.getUrlTrials(murl, sequelize, 'action', function(variants, resolve, reject, numResults) {
+                    // if facebook is sent a sharebandit URL with no treatment id, render best treatment metadata
                       schema.Metadata.findOne({
                         'where': { 'url':murl },
                         'order': [[ 'success_count', 'DESC' ]],
                         'limit': 1
                       }).then(function(bestTrial) {
-                        res.render('shareheaders', {
-                          'extraProperties': domainInfo.extraProperties || [],
-                          'title': bestTrial.headline,
-                          'description': bestTrial.text,
-                          'image': bestTrial.image_url,
-                          'fullUrl': config.baseUrl + req.originalUrl
-                        });
+                        if (bestTrial) {
+                          res.render('shareheaders', {
+                            'extraProperties': domainInfo.extraProperties || [],
+                            'title': bestTrial.headline,
+                            'description': bestTrial.text,
+                            'image': bestTrial.image_url,
+                            'fullUrl': config.baseUrl + req.originalUrl
+                          });
+                        } else {
+                          return res.status(404).send("Not found");
+                        }
                       });
-                    })
                   } else {
                     return res.status(404).send("Not found");
                   }
