@@ -3,6 +3,7 @@ var _ = require('lodash');
 var bandit = require('./bandit.js');
 var Promise = require("bluebird");
 var Sequelize = require('sequelize');
+var axios = require('axios');
 
 var init = function(app, schema, sequelize, config) {
 
@@ -65,6 +66,7 @@ var init = function(app, schema, sequelize, config) {
                     });
                   } else if (req.params.abver == '0') {
                     // if facebook is sent a sharebandit URL with no treatment id, render best treatment metadata
+
                       schema.Metadata.findOne({
                         'where': { 'url':murl },
                         'order': [[ 'success_count', 'DESC' ]],
@@ -77,6 +79,15 @@ var init = function(app, schema, sequelize, config) {
                             'description': bestTrial.text,
                             'image': bestTrial.image_url,
                             'fullUrl': config.baseUrl + req.originalUrl
+                          });
+
+                        // update facebook's cache with most recent metadata
+                        axios.post('https://graph.facebook.com', { id: murl, scrape: true, access_token: config.fbAccessToken })
+                          .then(function (response) {
+                            console.log(response);
+                          })
+                          .catch(function (error) {
+                            console.log(error);
                           });
                         } else {
                           return res.status(404).send("Not found");
