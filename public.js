@@ -3,7 +3,7 @@ var _ = require('lodash');
 var bandit = require('./bandit.js');
 var Promise = require("bluebird");
 var Sequelize = require('sequelize');
-var axios = require('axios');
+var updateFacebookCache = require ('./lib/updateFacebookCache.js')
 
 var init = function(app, schema, sequelize, config) {
 
@@ -65,29 +65,27 @@ var init = function(app, schema, sequelize, config) {
                       'description': 'basdfasdf',
                     });
                   } else if (req.params.abver == '0') {
-                    // if facebook is sent a sharebandit URL with no treatment id, render best treatment metadata
-
+                    // if facebook is sent a sharebandit URL with no treatment id render best treatment metadata and refresh fb cache
                       schema.Metadata.findOne({
                         'where': { 'url':murl },
                         'order': [[ 'success_count', 'DESC' ]],
                         'limit': 1
                       }).then(function(bestTrial) {
                         if (bestTrial) {
+                          var overOneHourAgo = (date) => {
+                            var HOUR = 1000 * 60 * 60;
+                            var hourAgo = Date.now() - HOUR;
+                            return date < hourAgo;
+                          }
+                          if (overOneHourAgo(bestTrial.updatedAt)) {
+                            updateFacebookCache(murl);
+                          }
                           res.render('shareheaders', {
                             'extraProperties': domainInfo.extraProperties || [],
                             'title': bestTrial.headline,
                             'description': bestTrial.text,
                             'image': bestTrial.image_url,
                             'fullUrl': config.baseUrl + req.originalUrl
-                          });
-
-                        // update facebook's cache with most recent metadata
-                        axios.post('https://graph.facebook.com', { id: murl, scrape: true, access_token: config.fbAccessToken })
-                          .then(function (response) {
-                            console.log(response);
-                          })
-                          .catch(function (error) {
-                            console.log(error);
                           });
                         } else {
                           return res.status(404).send("Not found");
