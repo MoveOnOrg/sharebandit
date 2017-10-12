@@ -26,9 +26,10 @@ SchemaActions.prototype = {
       });
     })
   },
-  newClick: function(abver, abid) {
+  newEvent: function(abver, abid, isAction) {
     var schema = this.schema
     var sequelize = this.sequelize
+    var EVENT_KEY = (isAction ? 'action_count' : 'success_count')
     return new Promise(function (newClickResolve, newClickReject) {
       schema.Metadata.findById(abver).then(function(metadata) {
         if (metadata) {
@@ -45,7 +46,7 @@ SchemaActions.prototype = {
                   reject();
                 };
                 //1.
-                metadata.increment('success_count', {transaction: t}).then(function() {
+                metadata.increment(EVENT_KEY, {transaction: t}).then(function() {
                   //2.
                   schema.Sharer.findOrCreate({where:{'key': abid,
                                                      'trial': abver},
@@ -53,11 +54,11 @@ SchemaActions.prototype = {
                                              })
                     .spread(function(sharer, created) {
                       //3.
-                      sharer.increment('success_count', {transaction: t}).then(
+                      sharer.increment(EVENT_KEY, {transaction: t}).then(
                         function() {
                           //4.
                           schema.Bandit.create({'trial': abver,
-                                                'action': false}, {transaction: t}).then(resolve, rejlog);
+                                                'action': !!isAction}, {transaction: t}).then(resolve, rejlog);
                         }, rejlog);
                     })
                 }, rejlog)

@@ -130,7 +130,7 @@ var init = function(app, schema, sequelize, config) {
               if (req.params.abver) {
                 var cautious_id = (parseInt(req.params.abver) || 0);
                 // sky: caching: get metadata and increment click
-                app.schemaActions.newClick(cautious_id, req.query.abid || '')
+                app.schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/false)
                   .then(function(value) {
                     if (req.query.absync) {
                       res.redirect(furl);
@@ -162,42 +162,13 @@ var init = function(app, schema, sequelize, config) {
             }
             if (req.params.abver) {
               // sky: caching: get metadata and increment action
-              sequelize.transaction(/*{
-                                      deferrable: Sequelize.Deferrable.SET_IMMEDIATE,
-                                      isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
-                                      },*/ function(t) {
-                //ideally, we'd pass a Promise.all and serialize this, for easier readability, if nothing else
-                // but that really f---s with the transaction, so better to do callback hell here
-                return new Promise(function(resolve, reject) {
-                  var rejlog = function() {
-                    //console.log('rejected!');
-                    reject();
-                  };
-                  var cautious_id = (parseInt(req.params.abver) || 0);
-                  //action 1.
-                  schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''),
-                                                     'trial': cautious_id},
-                                              transaction: t
-                                             })
-                    .spread(function(sharer, created) {
-                      //action 2.
-                      sharer.increment('action_count', {transaction: t}).then(function() {
-                        schema.Metadata.findById(cautious_id, {transaction: t}).then(function(metadata) {
-                          //action 3.
-                          metadata.increment('action_count', {transaction: t}).then(
-                                function() {
-                                  //action 4.
-                                  schema.Bandit.create({'trial':cautious_id, 'action':true}, {transaction: t}).then(resolve, rejlog);
-                                }, rejlog);
-                        });
-                      }, rejlog);
-                    });
-                })
-              }).then(function() {
-                if (req.query.absync) {
-                  res.end(smallgif, 'binary');
-                }
-              });
+              var cautious_id = (parseInt(req.params.abver) || 0);
+              app.schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/true)
+                .then(function() {
+                  if (req.query.absync) {
+                    res.end(smallgif, 'binary');
+                  }
+                });
             } else {
               if (req.query.absync) {
                 res.end(smallgif, 'binary');
