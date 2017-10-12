@@ -49,7 +49,7 @@ var boot = function(config, startOnPort) {
 
   // Configure Express app
   app.use(session(sessionConfig));
-  app.use(express.static(__dirname + '/public'));
+  app.use(express.static(__dirname + '/static'));
   app.use(bodyParser.urlencoded({ extended: true }));
   app.engine('html', swig.renderFile);
   app.set('view engine', 'html');
