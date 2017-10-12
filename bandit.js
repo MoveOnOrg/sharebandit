@@ -2,6 +2,10 @@ var PD = require("probability-distributions");
 var Promise = require("bluebird");
 
 var bayesBandit = function(url, sequelize, successMetric) {
+  return getUrlTrials(url, sequelize, successMetric, chooseFromVariants);
+}
+var getUrlTrials = function(url, sequelize, successMetric, func) {
+
   // returns a Promise which will resolve to a 'trial' choice for the url
 
   // algorithm summary
@@ -63,7 +67,7 @@ var bayesBandit = function(url, sequelize, successMetric) {
           }
         )
         .then(function(variants) {
-          return chooseFromVariants(variants, resolve, reject, 1);
+          return func(variants, resolve, reject, 1);
         });
     });
 };
@@ -103,5 +107,6 @@ function chooseFromVariants(variants, resolve, reject, numResults) {
 
 module.exports = {
   choose: bayesBandit,
-  chooseFromVariants: chooseFromVariants
+  chooseFromVariants: chooseFromVariants,
+  getUrlTrials: getUrlTrials
 };
