@@ -42,9 +42,18 @@ var boot = function(config, startOnPort) {
     resave: true,
     saveUninitialized: false
   }
-  if (config.redisSessionStore) {
+  if (config.redisSessionStore || config.redisStore || config.fakeRedis) {
+    var redisSessionConfig = (config.fakeRedis
+                              ? {client: require("redis").createClient()}
+                              : config.redisSessionStore || config.redisStore)
     var RedisStore = require('connect-redis')(session);
-    sessionConfig['store'] = new RedisStore(config.redisSessionStore);
+    sessionConfig['store'] = new RedisStore(redisSessionConfig);
+
+    if (config.redisStore) {
+      app.redis = require("redis").createClient(config.redisStore)
+    } else if (config.fakeRedis) {
+      app.redis = redisSessionConfig.client
+    }
   }
 
   // Configure Express app
@@ -76,6 +85,9 @@ var boot = function(config, startOnPort) {
   dbconn.schema = schema;
   sequelize.authenticate();
   dbconn.ready = sequelize.sync()
+
+  var SchemaActions = require('./schema-actions.js')
+  app.schemaActions = new SchemaActions(app, schema, sequelize, app.redis);
 
   //VIEWS
   var public_views = require('./public.js')(app, schema, sequelize, config);

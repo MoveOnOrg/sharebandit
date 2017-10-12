@@ -36,6 +36,7 @@ describe('server', function() {
       "baseUrl": baseUrl,
       "port": port,
       "sessionSecret": "testing stuff",
+      "fakeRedis": true,
       "domain_whitelist": {
         "example.com": { "proto": "http",
                          "extraProperties": [

@@ -53,6 +53,7 @@ var init = function(app, schema, sequelize, config) {
             if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.params.abver) >= 0 ) {
 
               var murl = (req.params.domain + decodeURIComponent(pathname || '/').replace(/.fb\d+/,''));
+              // sky: caching: get url metadata
               schema.Metadata.findOne({
                 'where': { 'url':murl, 'id':parseInt(req.params.abver)}
               }).then(function(trial) {
@@ -103,21 +104,8 @@ var init = function(app, schema, sequelize, config) {
                     var newsharer = {'key': req.query.abid,
                                      'trial': (parseInt(req.params.abver) || 0)
                                     };
-                    sequelize.transaction(function(t) {
-                      //ideally, we'd pass a Promise.all and serialize this, for easier readability, if nothing else
-                      // but that really f---s with the transaction, so better to do callback hell here
-                      return new Promise(function (resolve, reject) {
-                        schema.Sharer.findOrCreate({'where': newsharer}).spread(function(sharer, created) {
-                          if (created) {
-                            schema.Metadata.findById(parseInt(req.params.abver) || 0).then(function(metadata) {
-                              metadata.increment('trial_count').then(resolve, reject);
-                            });
-                          } else {
-                            resolve();
-                          }
-                        })
-                      });
-                    }).then(function() {
+                    // sky: caching: increment trial_count, add item
+                    app.schemaActions.newShare(newsharer, parseInt(req.params.abver) || 0).then(function() {
                       if (req.params.abver) {
                         renderFacebook();
                       }
@@ -141,52 +129,22 @@ var init = function(app, schema, sequelize, config) {
               // e.g. with AND trial=(SELECT id FROM metadata WHERE url=$$trialurl) -- but that would slow it down
               if (req.params.abver) {
                 var cautious_id = (parseInt(req.params.abver) || 0);
-                schema.Metadata.findById(cautious_id).then(function(metadata) {
-                  if (metadata) {
-                    sequelize.transaction(/*{
-                                            deferrable: Sequelize.Deferrable.SET_IMMEDIATE,
-                                            isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
-                                            },*/
-                                          function(t) {
-                      //ideally, we'd pass a Promise.all and serialize this, for easier readability, if nothing else
-                      // but that really f---s with the transaction, so better to do callback hell here
-                      return new Promise(function (resolve, reject) {
-                        var rejlog = function() {
-                          //console.log('rejected!');
-                          reject();
-                        };
-                        //1.
-                        metadata.increment('success_count', {transaction: t}).then(function() {
-                          //2.
-                          schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''),
-                                                             'trial': cautious_id},
-                                                      transaction: t
-                                                     })
-                            .spread(function(sharer, created) {
-                              //3.
-                              sharer.increment('success_count', {transaction: t}).then(
-                                function() {
-                                  //4.
-                                  schema.Bandit.create({'trial': cautious_id,
-                                                        'action': false}, {transaction: t}).then(resolve, rejlog);
-                                }, rejlog);
-                            })
-                        }, rejlog)
-                      });
-                    }).then(function(value) {
-                      if (req.query.absync) {
-                        res.redirect(furl);
-                      }
-                    }, function(reason) {
-                      console.log('Failed save of transaction ' + req.originalUrl
-                                  + ' -- ' + reason);
-                    });
-                  }
-                });
+                // sky: caching: get metadata and increment click
+                app.schemaActions.newClick(cautious_id, req.query.abid || '')
+                  .then(function(value) {
+                    if (req.query.absync) {
+                      res.redirect(furl);
+                    }
+                  }, function(reason) {
+                    console.log('Failed save of transaction ' + req.originalUrl
+                                + ' -- ' + reason);
+                    if (req.query.absync) {
+                      res.redirect(furl); // redirect anyway, since the client shouldn't care
+                    }
+                  });
               }
             }
-          }
-         );
+          });
 
   //smallest GIF
   //http://probablyprogramming.com/2009/03/15/the-tiniest-gif-ever
@@ -203,6 +161,7 @@ var init = function(app, schema, sequelize, config) {
               res.end(smallgif, 'binary');
             }
             if (req.params.abver) {
+              // sky: caching: get metadata and increment action
               sequelize.transaction(/*{
                                       deferrable: Sequelize.Deferrable.SET_IMMEDIATE,
                                       isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
@@ -274,6 +233,7 @@ var init = function(app, schema, sequelize, config) {
 
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
       bandit.choose(murl, sequelize, successMetric).then(function(trialChoice) {
+        // sky: caching: get metadata
         schema.Metadata.findAll({where: {id: trialChoice}, plain:true, attributes: ['id', 'url', 'headline','text','image_url']}).then(function(results) {
           var r= results.toJSON();
           r.shareurl= app._shareUrl('', trialChoice) + murl;
