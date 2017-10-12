@@ -3,7 +3,6 @@ var _ = require('lodash');
 var bandit = require('./bandit.js');
 var Promise = require("bluebird");
 var Sequelize = require('sequelize');
-var updateFacebookCache = require ('./lib/updateFacebookCache.js')
 
 var init = function(app, schema, sequelize, config) {
 
@@ -68,18 +67,9 @@ var init = function(app, schema, sequelize, config) {
                     // if facebook is sent a sharebandit URL with no treatment id render best treatment metadata and refresh fb cache
                       schema.Metadata.findOne({
                         'where': { 'url':murl },
-                        'order': [[ 'success_count', 'DESC' ]],
-                        'limit': 1
+                        'order': [[ 'success_count', 'DESC' ]]
                       }).then(function(bestTrial) {
                         if (bestTrial) {
-                          var overOneHourAgo = (date) => {
-                            var HOUR = 1000 * 60 * 60;
-                            var hourAgo = Date.now() - HOUR;
-                            return date < hourAgo;
-                          }
-                          if (overOneHourAgo(bestTrial.updatedAt)) {
-                            updateFacebookCache(murl);
-                          }
                           res.render('shareheaders', {
                             'extraProperties': domainInfo.extraProperties || [],
                             'title': bestTrial.headline,
