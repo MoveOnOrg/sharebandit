@@ -18,6 +18,10 @@ var init = function(app, schema, sequelize, config) {
 
   // Empty page to confirm site is up
   app.get('/ping', function (req, res) {
+    //arbitrary query to ensure db is available
+    sequelize.query("SELECT COUNT(*) FROM bandits;").spread((results, metadata) => {
+      console.log(results);
+    })
     res.end('OK');
   });
 
