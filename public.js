@@ -54,9 +54,7 @@ var init = function(app, schema, sequelize, config) {
 
               var murl = (req.params.domain + decodeURIComponent(pathname || '/').replace(/.fb\d+/,''));
               // sky: caching: get url metadata
-              schema.Metadata.findOne({
-                'where': { 'url':murl, 'id':parseInt(req.params.abver)}
-              }).then(function(trial) {
+              app.schemaActions.trialLookup(murl, parseInt(req.params.abver)).then(function(trial) {
                 if (!trial) {
                   if (/testshare/.test(pathname)) {
                     res.render('shareheaders', {
@@ -221,6 +219,7 @@ var init = function(app, schema, sequelize, config) {
     var params = {variants: []};
 
     //res.setHeader('Content-Type', 'application/json');
+    // sky: caching: gets all the url trials
     schema.Metadata.findAll({
       where: {
         url: req.params.domain + req.params[0]
