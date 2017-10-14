@@ -2,9 +2,8 @@ var url = require('url');
 var _ = require('lodash');
 var bandit = require('./bandit.js');
 var Promise = require("bluebird");
-var Sequelize = require('sequelize');
 
-var init = function(app, schema, sequelize, config) {
+var init = function(app, schema, schemaActions, config) {
 
   app._shareUrl = function(href, abver) {
     //based on href and abver, generate a url that can be shared
@@ -54,7 +53,7 @@ var init = function(app, schema, sequelize, config) {
 
               var murl = (req.params.domain + decodeURIComponent(pathname || '/').replace(/.fb\d+/,''));
               // sky: caching: get url metadata
-              app.schemaActions.trialLookup(murl, parseInt(req.params.abver)).then(function(trial) {
+              schemaActions.trialLookup(murl, parseInt(req.params.abver)).then(function(trial) {
                 if (!trial) {
                   if (/testshare/.test(pathname)) {
                     res.render('shareheaders', {
@@ -103,7 +102,7 @@ var init = function(app, schema, sequelize, config) {
                                      'trial': (parseInt(req.params.abver) || 0)
                                     };
                     // sky: caching: increment trial_count, add item
-                    app.schemaActions.newShare(newsharer, parseInt(req.params.abver) || 0).then(function() {
+                    schemaActions.newShare(newsharer, parseInt(req.params.abver) || 0).then(function() {
                       if (req.params.abver) {
                         renderFacebook();
                       }
@@ -128,7 +127,7 @@ var init = function(app, schema, sequelize, config) {
               if (req.params.abver) {
                 var cautious_id = (parseInt(req.params.abver) || 0);
                 // sky: caching: get metadata and increment click
-                app.schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/false)
+                schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/false)
                   .then(function(value) {
                     if (req.query.absync) {
                       res.redirect(furl);
@@ -161,7 +160,7 @@ var init = function(app, schema, sequelize, config) {
             if (req.params.abver) {
               // sky: caching: get metadata and increment action
               var cautious_id = (parseInt(req.params.abver) || 0);
-              app.schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/true)
+              schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/true)
                 .then(function() {
                   if (req.query.absync) {
                     res.end(smallgif, 'binary');
@@ -183,7 +182,7 @@ var init = function(app, schema, sequelize, config) {
 
       var proto = config.domain_whitelist[req.params.domain].proto;
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
-      bandit.choose(murl, sequelize, successMetric).then(function(trialChoice) {
+      bandit.choose(murl, successMetric, schemaActions).then(function(trialChoice) {
         var burl = app._shareUrl('', trialChoice);
         return res.render('jsshare', {baseUrl: burl, abver: trialChoice});
       });
@@ -201,7 +200,7 @@ var init = function(app, schema, sequelize, config) {
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
-      bandit.choose(murl, sequelize, successMetric).then(function(trialChoice) {
+      bandit.choose(murl, successMetric, schemaActions).then(function(trialChoice) {
         // sky: caching: get metadata
         schema.Metadata.findAll({where: {id: trialChoice}, plain:true, attributes: ['id', 'url', 'headline','text','image_url']}).then(function(results) {
           var r= results.toJSON();

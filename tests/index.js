@@ -1,8 +1,10 @@
 var app = require('../index');
+var bandit = require('../bandit');
 
 var request = require('request');
 var Promise = require("bluebird");
 var expect = require('expect.js');
+var realApp;
 
 //Things to test
 //  create two versions of a url, with img, title
@@ -26,7 +28,7 @@ describe('server', function() {
   var baseUrl = "http://localhost:" + port;
 
   before(function() {
-    app.boot({
+    realApp = app.boot({
       "db": {"dialect": "sqlite",
              "storage": "testdb.sqlite",
              //THIS IS VERY USEFUL TO CHANGE if you are debugging some tests
@@ -36,7 +38,7 @@ describe('server', function() {
       "baseUrl": baseUrl,
       "port": port,
       "sessionSecret": "testing stuff",
-      "fakeRedis": true,
+      "xxfakeRedis": true,
       "domain_whitelist": {
         "example.com": { "proto": "http",
                          "extraProperties": [
@@ -277,13 +279,20 @@ describe('server', function() {
       }, function(err, response, body) {
         expect(response.statusCode).to.equal(302);
         expect(response.headers.location).to.contain(URL_AB + middlePart + SHARER_ABIDS[1]);
-        app.db.schema.Bandit.findAll().then(function(bandit_logs) {
-          app.db.schema.Metadata.findById(TRIALS[0])
-            .then(function(meta) {
-              expect(meta.success_count).to.equal(1);
-              done();
-            });
-        });
+        bandit.getUrlTrials(URL_AB_NOHTTP, 'success', function(trials) {
+          // Will return something like:
+          // [ { trial: 171, success: 1, trials: 19 },
+          //   { trial: 172, success: 0, trials: 6 } ]
+          // TRIALS[0] is the first trial
+          trials.filter(function(t) {
+            if (t.trial == TRIALS[0]) {
+              expect(t.success).to.equal(1);
+            } else {
+              expect(t.success).to.equal(0);
+            }
+          })
+          done();
+        }, realApp.schemaActions)
       })
     });
 

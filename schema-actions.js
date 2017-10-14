@@ -1,34 +1,58 @@
 var Promise = require("bluebird");
 
-function SchemaActions(app, schema, sequelize, redis) {
-  this.app = app
+function SchemaActions(schema, sequelize, redis) {
   this.schema = schema
   this.sequelize = sequelize
   this.redis = redis
-  this.dbactions = new DBSchemaActions(app, schema, sequelize, redis)
+  this.dbActions = new DBSchemaActions(schema, sequelize)
+  this.redisActions = new RedisSchemaActions(redis)
 }
 
 SchemaActions.prototype = {
   newEvent: function(abver, abid, isAction) {
-    // TODO
-    // 1. try cache get on metadata,
-    //    a. if rejected with err.noMetadata, then call dbactions.newEvent(.... ,loadMetadataIntoCache)
-    return this.dbactions.newEvent(abver, abid, isAction)
+    var redisActions = this.redisActions
+    var dbActions = this.dbActions
+    return new Promise(function (newEventResolve, newEventReject) {
+      redisActions.newEvent(abver, abid, isAction)
+        .then(newEventResolve,
+              function(err) {
+                if (err.noMetadata) {
+                  dbActions.newEvent(abver, abid, isAction, redisActions.loadMetadataIntoCache.bind(redisActions))
+                    .then(newEventResolve, newEventReject)
+                } else {
+                  newEventReject(err)
+                }
+              })
+    })
   },
   newShare: function(newsharer, abver) {
-    return this.dbactions.newShare(newsharer, abver)
+    var redisActions = this.redisActions
+    var dbActions = this.dbActions
+    return new Promise(function (newEventResolve, newEventReject) {
+      redisActions.newShare(newsharer, abver)
+        .then(newEventResolve,
+              function(err) {
+                dbActions.newShare(newsharer, abver)
+                  .then(newEventResolve, newEventReject)
+              })
+    })
   },
   trialLookup: function(url, abver) {
-    return this.dbactions.trialLookup(url, abver)
+    return this.dbActions.trialLookup(url, abver)
+  },
+  getSuccessfulShareCountsByTrial: function(url, abver) {
+    return this.dbActions.getSuccessfulShareCountsByTrial(url, abver)
   }
 }
 
-function RedisSchemaActions(app, redis) {
-  this.app = app
+function RedisSchemaActions(redis) {
   this.redis = redis
 }
 
 RedisSchemaActions.prototype = {
+  loadMetadataIntoCache: function(metadata) {
+    this.redis.set('METADATA_'+metadata.id, JSON.stringify(metadata.toJSON()), function(err, data){})
+  },
   _loadUrlFromDb: function(url, abid) {
     // 1. add abver members
     // 2. for each abver Metadata record,
@@ -53,9 +77,9 @@ RedisSchemaActions.prototype = {
   },
   newShare: function(newsharer, abver) {
     var r = this.redis
-    var event = (isAction ? 'action' : 'success')
+    var event = 'success' //a new share is a click with 0 clicks
     return new Promise(function (newShareResolve, newShareReject) {
-      r.hincrby(('PROCESS_'+event), (abver+'_'+abid), 1, function(err){
+      r.hincrby(('PROCESS_'+event), (abver+'_'+abid), 0, function(err){
         if (err) {
           newShareReject(err)
         } else {
@@ -98,6 +122,9 @@ RedisSchemaActions.prototype = {
       })
     })
   },
+  getSuccessfulShareCountsByTrial: function(url, abver) {
+    var r = this.redis
+  },
   processCacheSaves: function() {
     // For each successMetric= {action,success}:
     // HGETALL SHAREBANDIT_PROCESS_<successMetric>
@@ -110,8 +137,7 @@ RedisSchemaActions.prototype = {
   }
 }
 
-function DBSchemaActions(app, schema, sequelize) {
-  this.app = app
+function DBSchemaActions(schema, sequelize) {
   this.schema = schema
   this.sequelize = sequelize
 }
@@ -186,13 +212,30 @@ DBSchemaActions.prototype = {
         }
       })
     })
+  },
+  getSuccessfulShareCountsByTrial: function(url, successMetric) {
+    var query = ('SELECT trial, sum(case when Sharers.{{success_field}}_count > 0 then 1 else 0 end) AS success, count(key) AS trials'
+                 +' FROM Sharers'
+                 +' JOIN Metadata on (Metadata.id = Sharers.trial)'
+                 +' WHERE Metadata.url = ? GROUP BY trial')
+              .replace('{{success_field}}',
+                       ((successMetric == 'action') ? 'action' : 'success')
+                      );
+
+    return this.sequelize.query(
+      query,
+      {
+        replacements: [url],
+        type: this.sequelize.QueryTypes.SELECT
+      }
+    )
   }
 }
 
-module.exports = function(app, schema, sequelize, redis) {
+module.exports = function(schema, sequelize, redis) {
   if (redis) {
-    return new SchemaActions(app, schema, sequelize, redis)
+    return new SchemaActions(schema, sequelize, redis)
   } else {
-    return new DBSchemaActions(app, schema, sequelize)
+    return new DBSchemaActions(schema, sequelize)
   }
 }
