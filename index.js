@@ -44,16 +44,16 @@ var boot = function(config, startOnPort) {
     saveUninitialized: false
   }
   if (config.redisSessionStore || config.redisStore || config.fakeRedis) {
-    var redisSessionConfig = (config.fakeRedis
-                              ? {client: redis }
-                              : config.redisSessionStore || config.redisStore)
-    var RedisStore = require('connect-redis')(session);
-    sessionConfig['store'] = new RedisStore(redisSessionConfig);
     if (config.fakeRedis) {
       redis = require("fakeredis").createClient()
     } else if (config.redisStore) {
       redis = require("redis").createClient(config.redisStore)
     }
+    var redisSessionConfig = (config.fakeRedis
+                              ? {client: redis }
+                              : config.redisSessionStore || config.redisStore)
+    var RedisStore = require('connect-redis')(session);
+    sessionConfig['store'] = new RedisStore(redisSessionConfig);
   }
 
   // Configure Express app

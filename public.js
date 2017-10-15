@@ -52,7 +52,6 @@ var init = function(app, schema, schemaActions, config) {
             if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.params.abver) >= 0 ) {
 
               var murl = (req.params.domain + decodeURIComponent(pathname || '/').replace(/.fb\d+/,''));
-              // sky: caching: get url metadata
               schemaActions.trialLookup(murl, parseInt(req.params.abver)).then(function(trial) {
                 if (!trial) {
                   if (/testshare/.test(pathname)) {
@@ -101,7 +100,6 @@ var init = function(app, schema, schemaActions, config) {
                     var newsharer = {'key': req.query.abid,
                                      'trial': (parseInt(req.params.abver) || 0)
                                     };
-                    // sky: caching: increment trial_count, add item
                     schemaActions.newShare(newsharer, parseInt(req.params.abver) || 0).then(function() {
                       if (req.params.abver) {
                         renderFacebook();
@@ -126,7 +124,6 @@ var init = function(app, schema, schemaActions, config) {
               // e.g. with AND trial=(SELECT id FROM metadata WHERE url=$$trialurl) -- but that would slow it down
               if (req.params.abver) {
                 var cautious_id = (parseInt(req.params.abver) || 0);
-                // sky: caching: get metadata and increment click
                 schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/false)
                   .then(function(value) {
                     if (req.query.absync) {
@@ -158,7 +155,6 @@ var init = function(app, schema, schemaActions, config) {
               res.end(smallgif, 'binary');
             }
             if (req.params.abver) {
-              // sky: caching: get metadata and increment action
               var cautious_id = (parseInt(req.params.abver) || 0);
               schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/true)
                 .then(function() {

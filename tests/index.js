@@ -38,7 +38,7 @@ describe('server', function() {
       "baseUrl": baseUrl,
       "port": port,
       "sessionSecret": "testing stuff",
-      "xxfakeRedis": true,
+      //"fakeRedis": true,
       "domain_whitelist": {
         "example.com": { "proto": "http",
                          "extraProperties": [
@@ -81,7 +81,7 @@ describe('server', function() {
       // Basically this runs too slowly to be in 2000ms timeout, so we'll do it a bunch
       //  of times to inflate the results
       return function(done) {
-        var ITER_TIMES = 20;
+        var ITER_TIMES = 15;
         TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
           return (baseUrl + action + i + '/' + URL_AB_NOHTTP);
         });
