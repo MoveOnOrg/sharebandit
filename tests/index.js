@@ -38,7 +38,7 @@ describe('server', function() {
       "baseUrl": baseUrl,
       "port": port,
       "sessionSecret": "testing stuff",
-      //"fakeRedis": true,
+      "fakeRedis": true,
       "domain_whitelist": {
         "example.com": { "proto": "http",
                          "extraProperties": [
@@ -306,6 +306,7 @@ describe('server', function() {
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('should be biased toward the first trial', function(done) {
+      realApp.schemaActions.processData().then(function() {
           request.get(baseUrl + '/admin/reportjson/stats/' + TRIALS.join('-'), function(err, response, body) {
             var data = JSON.parse(body).results;
             for (var i=1;i<data.length;i++) {
@@ -317,8 +318,8 @@ describe('server', function() {
             }
             done();
           });
-        }
-      );
+      })
+    });
 
     it('should now be weighted with bandit', testJsBanditResponse(20, function(timesEach) {
       console.log('inbalance after 0.8 preference', timesEach);

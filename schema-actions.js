@@ -28,11 +28,11 @@ SchemaActions.prototype = {
     var redisActions = this.redisActions
     var dbActions = this.dbActions
     return new Promise(function (newEventResolve, newEventReject) {
-      //console.log('new event', abver, abid, isAction)
+      // console.log('new event', abver, abid, isAction)
       redisActions.newEvent(abver, abid, isAction)
         .then(newEventResolve,
               function(err) {
-                console.log('NONCACHED metadata results', err)
+                // console.log('NONCACHED metadata results', err)
                 if (err.noMetadata) {
                   dbActions.newEvent(abver, abid, isAction, redisActions.loadMetadataIntoCache.bind(redisActions))
                     .then(newEventResolve, newEventReject)
@@ -45,7 +45,7 @@ SchemaActions.prototype = {
   newShare: function(newsharer, abver) {
     var redisActions = this.redisActions
     var dbActions = this.dbActions
-    //console.log('new share', newsharer, abver)
+    // console.log('new share', newsharer, abver)
     return new Promise(function (newEventResolve, newEventReject) {
       redisActions.newShare(newsharer, abver)
         .then(newEventResolve,
@@ -74,13 +74,14 @@ SchemaActions.prototype = {
                           redisActions.getSuccessfulShareCountsByTrial(url, successMetric)
                             .then(function(cachedTrials) {
                               // from cache after saving there
-                              //console.log('cached Trials', cachedTrials)
+                              // console.log('cached Trials', cachedTrials)
                               trialCountResolve(cachedTrials)
                             }, function(err) {
                               //fallback to trials from db
                               trialCountResolve(trials)
                             })
                         }, function(err){
+                          // fall-back to db results we just got
                           trialCountResolve(trials)
                         })
                     }, trialCountReject)
@@ -89,6 +90,9 @@ SchemaActions.prototype = {
                 }
               })
     })
+  },
+  processData: function() {
+    return this.redisActions.processData(this.dbActions)
   }
 }
 
@@ -98,14 +102,14 @@ function RedisSchemaActions(redis) {
 
 RedisSchemaActions.prototype = {
   loadMetadataIntoCache: function(metadata) {
-    //console.log('loadmetadataintocache', metadata.toJSON())
+    // console.log('loadmetadataintocache', metadata.toJSON())
     this.redis.set('METADATA_'+metadata.id, JSON.stringify(metadata.toJSON()), function(err, data){})
   },
   loadTrialDataIntoCache: function(url, trials, dbActions) {
     var r = this.redis
     return new Promise(function (resolve, reject) {
       var noZeros = true
-      //console.log('TRIALS LIST', trials)
+      // console.log('TRIALS LIST', trials)
       var memberSuccessAbids = {}
       var memberDetails = {}
       var members = trials.map(function(t) {
@@ -199,10 +203,6 @@ RedisSchemaActions.prototype = {
             var metadataObj = JSON.parse(metadata)
             var url = metadataObj.url
             var commands = [
-              // TODO: ISSUE: tests aren't assuming a new share request before the event
-              // How do we insert a sharer represented from this url first?
-              // Otherwise, will need to adjust test, at least
-              // SOLUTION: we need a hyperloglog of abids for the TOTAL rather than just a count
               ['hincrby', ('PROCESS_'+event), (abver+'_'+abid), 1], //used to update DB
               ['pfadd', ('sb_'+event+'_'+abver), abid], //used for bandit algorithm
               ['pfadd', ('sb_total_'+abver), abid], //used for bandit algorithm
@@ -213,7 +213,7 @@ RedisSchemaActions.prototype = {
               if (err) {
                 newEventReject(err)
               } else {
-                //console.log('completed cached response', results, metadata)
+                // console.log('completed cached response', results, metadata)
                 // not sure what value is useful here....
                 newEventResolve(metadata)
               }
@@ -239,9 +239,9 @@ RedisSchemaActions.prototype = {
               ['pfcount', ('sb_total_'+m_id)]
             )
           })
-          //console.log('share trial commands', commands)
+          // console.log('share trial commands', commands)
           r.multi(commands).exec(function(err, results) {
-            //console.log('share trial results', err, results)
+            // console.log('share trial results', err, results)
             if (err) {
               trialCountReject(err)
             } else {
@@ -254,7 +254,7 @@ RedisSchemaActions.prototype = {
                   trials: results[i+1]
                 })
               }
-              //console.log('share trial return value', returnValue)
+              // console.log('share trial return value', returnValue)
               trialCountResolve(returnValue)
             }
           })
@@ -262,16 +262,118 @@ RedisSchemaActions.prototype = {
       })
     })
   },
-  processCacheSaves: function() {
-    // For each successMetric= {action,success}:
-    // HGETALL SHAREBANDIT_PROCESS_<successMetric>
-    // for all not 0
-    //   send db update:
-    //   HINCRBY SHAREBANDIT_PROCESS_<successMetric> <abver-abid> -<total_read>
-    // for all 0:
-    //   sort by abid, ascending
-    //    HDEL all but top 10 keys
-    // monitor size of TRIALS and remove when old?
+  processData: function(dbActions, maxProcessCount) {
+    var r = this.redis
+    var events = ['success', 'action']
+    var dbRecords = {}
+    var completed = 0
+    return new Promise(function (processDataResolve, processDataReject) {
+      // For each successMetric....
+      // 1. get all PROCESS_{success,action} keys
+      //    TODO: figure out how to do this incrementally 100-at-a-time (without just redoing same top keys)
+      // 2. find out which ones already have sharer records in the db
+      // 3. then create new ones for non-existing records, and update counts for existing ones
+      r.multi(events.map(function(e) { return ['hgetall', 'PROCESS_'+e] })).exec(function(err, shareEventsPerEvent) {
+        var allShareEvents = {}
+        shareEventsPerEvent.forEach(function(shareEvents, i) {
+          // moves [{[abid_abid] => <metric count>}, ... ] to {[abid_abid] => {[<metric>]:<count>}
+          for (var s in shareEvents) {
+            if (!(s in allShareEvents)) {
+              allShareEvents[s] = {}
+            }
+            allShareEvents[s][events[i]] = shareEvents[s]
+          }
+        })
+        // console.log('cached events to process', err, allShareEvents)
+        var baseSlice = Object.keys(allShareEvents)
+        dbActions.schema.Sharer.findAll({
+          attributes: ['id', 'key', 'trial'],
+          where: {
+            key: {
+              $in: baseSlice.map(function(redisKey){ return redisKey.split('_')[1] }) //abid
+            }
+          }
+        }).then(function(dbSharers) {
+          // console.log('db results to match cache', dbSharers)
+          dbSharers.forEach(function(dbShare) {
+            dbRecords[dbShare.dataValues.trial + '_' + dbShare.dataValues.key] = dbShare.dataValues.id
+          })
+          dbActions.sequelize.transaction(function(t) {
+            return new Promise(function (completeTransaction, rollbackTransaction) {
+              var newToDb = {}
+              for (var i=0,l=baseSlice.length; i<l; i++) {
+                var abver_abid = baseSlice[i]
+                var split_abver_abid = abver_abid.split('_')
+                events.forEach(function(event) {
+                  var updateCount = allShareEvents[abver_abid][event]
+                  if (abver_abid in dbRecords) {
+                    if (updateCount && parseInt(updateCount)) {
+                      dbActions.sequelize.query("UPDATE sharers SET "+event+"_count = "+event+"_count + ? WHERE id = ?", {
+                        replacements: [parseInt(updateCount), dbRecords[abver_abid]],
+                        transaction: t
+                      }).spread(function(results, metadata) {}, function(err) {
+                        console.log('ERROR update raw sql', err)
+                      })
+                    }
+                  } else {
+                    if (!(abver_abid in newToDb)) {
+                      newToDb[abver_abid] = { 'trial': split_abver_abid[0], 'key': split_abver_abid[1] }
+                    }
+                    newToDb[abver_abid][event+'_count'] = updateCount
+                  }
+                })
+              }
+              var newSharers = Object.keys(newToDb).map(function(s) {return newToDb[s] })
+              if (newSharers.length) {
+                dbActions.schema.Sharer.bulkCreate(newSharers,
+                                                   {transaction: t}).then(function(success) {
+                                                     completeTransaction()
+                                                   }, function(err){
+                                                     console.log('bulk create error', err)
+                                                     rollbackTransaction(err)
+                                                   })
+              }
+            })
+          }).then(function(transactionComplete) {
+            // now that we saved to the db, we can decrement/clear the process values
+            var commands = []
+            baseSlice.forEach(function(abver_abid) {
+              events.forEach(function(event) {
+                if (!allShareEvents[abver_abid][event]) {
+                  return // skip event-(abver-abid) pair, since no key exists
+                }
+                var updateCount = parseInt(allShareEvents[abver_abid][event])
+                if (updateCount) {
+                  commands.push(['hincrby', 'PROCESS_'+event, abver_abid, -updateCount])
+                } else { // either 0 or null, so we should purge the key
+                  // TODO: possibly sort by abver asc and just drop the top-10 or so
+                  //       That way older abvers will cycle out faster
+                  commands.push(['hdel', 'PROCESS_'+event, abver_abid])
+                }
+              })
+            })
+            r.multi(commands).exec(function(err) {
+              if (err) {
+                console.log('Failed to resync cache to db!'
+                            + 'At this point, your db and cache are out of sync'
+                            + 'and future syncs will inflate rates. Error:', err)
+                // re-trying, etc would only make this worse :-(
+                // so will fall through to resolving
+              }
+              if (++completed) {
+                processDataResolve()
+              }
+            })
+          }, function(transactionErr) {
+            console.log('transaction error', transactionErr)
+            processDataReject(transactionErr)
+          })
+          }, function(dbSharerSelectErr) {
+            console.log('db error', dbSharerSelectErr);
+            processDataReject(dbSharerSelectErr)
+          })
+      })
+    })
   }
 }
 
@@ -409,6 +511,9 @@ DBSchemaActions.prototype = {
         type: this.sequelize.QueryTypes.SELECT
       }
     )
+  },
+  processData: function() {
+    return Promise.resolve()
   }
 }
 
