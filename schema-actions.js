@@ -112,7 +112,7 @@ RedisSchemaActions.prototype = {
       ['expire', metadataKey, 60*60] // 1 hour
     ]).exec(function(err, data) {
       if (err) {
-        console.log('error saving metadata cache', metadata.id, err);
+        console.error('error saving metadata cache', metadata.id, err);
       }
     });
   },
@@ -199,12 +199,10 @@ RedisSchemaActions.prototype = {
     });
   },
   newEvent: function(abver, abid, isAction) {
-    var startTimes = [new Date()];
     var r = this.redis;
     var event = (isAction ? 'action' : 'success');
     return new Promise(function (newEventResolve, newEventReject) {
       r.get('METADATA_'+abver, function(err, metadata) {
-        startTimes.push(new Date());
         if (err) {
           return newEventReject(err);
         } else {
@@ -224,14 +222,11 @@ RedisSchemaActions.prototype = {
               ['expire', ('sb_total_'+abver), 86400] // 1 day
             ];
             r.multi(commands).exec(function(err, abver, abid, results) {
-              startTimes.push(new Date());
               if (err) {
                 newEventReject(err);
               } else {
                 // console.log('completed cached response', results, metadata)
                 // not sure what value is useful here....
-                var endTime = new Date();
-                console.log(startTimes.map(function(x){return endTime - x;}));
                 newEventResolve(metadata);
               }
             });
@@ -381,7 +376,7 @@ RedisSchemaActions.prototype = {
                         replacements: [parseInt(updateCount), dbRecords[abver_abid]],
                         transaction: t
                       }).spread(function(results, metadata) {}, function(err) {
-                        console.log('ERROR update raw sql', err);
+                        console.error('ERROR update raw sql', err);
                       });
                     }
                   } else {
@@ -398,7 +393,7 @@ RedisSchemaActions.prototype = {
                   {transaction: t}).then(function(success) {
                   completeTransaction();
                 }, function(err){
-                  console.log('bulk create error', err);
+                  console.error('bulk create error', err);
                   rollbackTransaction(err);
                 });
               }
@@ -423,7 +418,7 @@ RedisSchemaActions.prototype = {
             });
             r.multi(commands).exec(function(err) {
               if (err) {
-                console.log('Failed to resync cache to db!'
+                console.error('Failed to resync cache to db!'
                             + 'At this point, your db and cache are out of sync'
                             + 'and future syncs will inflate rates. Error:', err);
                 // re-trying, etc would only make this worse :-(
@@ -434,11 +429,11 @@ RedisSchemaActions.prototype = {
               }
             });
           }, function(transactionErr) {
-            console.log('transaction error', transactionErr);
+            console.error('transaction error', transactionErr);
             processDataReject(transactionErr);
           });
         }, function(dbSharerSelectErr) {
-          console.log('db error', dbSharerSelectErr);
+          console.error('db error', dbSharerSelectErr);
           processDataReject(dbSharerSelectErr);
         });
       });
@@ -502,7 +497,6 @@ DBSchemaActions.prototype = {
     });
   },
   newEvent: function(abver, abid, isAction, metadataRetrievalCallback) {
-    var startTime = new Date();
     var schema = this.schema;
     var sequelize = this.sequelize;
     var EVENT_KEY = (isAction ? 'action_count' : 'success_count');
@@ -543,8 +537,6 @@ DBSchemaActions.prototype = {
                 }, rejlog);
               });
             }).then(function(data) {
-            var endTime = new Date();
-            console.log(endTime - startTime);
             newEventResolve(data);
           }, newEventReject);
         } else {

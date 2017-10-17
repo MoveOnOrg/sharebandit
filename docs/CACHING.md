@@ -5,7 +5,7 @@ then we recommend enabling our Redis caching layer.
 
 Some important notes:
 
-* Redis > 2. is required. (because we use HyperLogLog commands `PFADD` and `PFCOUNT`)
+* Redis >= `2.8.9` is required. (because we use HyperLogLog commands `PFADD` and `PFCOUNT`)
 
 * Counts for shares and successes are stored with HyperLogLog
   algorithm which creates a % error of ~1.08%.  This should be more

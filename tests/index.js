@@ -51,6 +51,7 @@ describe('server', function() {
       app.db.schema.Sharer.destroy({truncate:true}).catch(function(){
         //ignore failure which can happen if the db wasn't created yet
       });
+
       app.db.schema.Bandit.destroy({truncate:true}).catch(function(){});
       app.db.schema.Metadata.destroy({truncate:true}).catch(function(){});
     } catch(e) {
@@ -335,7 +336,6 @@ describe('server', function() {
 
   describe('success events: redirects,actions: caching ON', function() {
     before(function() {
-
       port = port + 1
       baseUrl = "http://localhost:" + port;
 
