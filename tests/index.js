@@ -38,7 +38,6 @@ describe('server', function() {
       "baseUrl": baseUrl,
       "port": port,
       "sessionSecret": "testing stuff",
-      "fakeRedis": true,
       "domain_whitelist": {
         "example.com": { "proto": "http",
                          "extraProperties": [
@@ -172,6 +171,7 @@ describe('server', function() {
       var firstLineRegex = new RegExp('^//'+baseUrl+'/r/(\\d+)/');
       var timesEach = [0,0];
       //count a bunch of requests, and make sure we get some back from each trial version
+      TRIAL_JS_URL = baseUrl + '/js/' + URL_AB_NOHTTP;
       for (var i=0; i<iterTimes; i++) {
         request.get(TRIAL_JS_URL, function(err, response, body) {
           expect(response.statusCode).to.equal(200);
@@ -199,7 +199,7 @@ describe('server', function() {
       }));
   });
 
-  describe('success events: redirects,actions', function() {
+  var testEventSuccess = function() {
     it('20 random requests should NOT bias redirect results', twentyAtATime(0.8));
 
     it('should 404 on bad domain/url', function(done) {
@@ -306,7 +306,7 @@ describe('server', function() {
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('should be biased toward the first trial', function(done) {
-      realApp.schemaActions.processData().then(function() {
+      realApp.schemaActions.processDataIncrementally(function(){return true}).then(function() {
           request.get(baseUrl + '/admin/reportjson/stats/' + TRIALS.join('-'), function(err, response, body) {
             var data = JSON.parse(body).results;
             for (var i=1;i<data.length;i++) {
@@ -327,7 +327,44 @@ describe('server', function() {
       return true;
     }))
 
-  });
+  }
+
+  describe('success events: redirects,actions: NO caching', function() {
+    testEventSuccess()
+  })
+
+  describe('success events: redirects,actions: caching ON', function() {
+    before(function() {
+
+      port = port + 1
+      baseUrl = "http://localhost:" + port;
+
+      realApp = app.boot({
+        "db": {"dialect": "sqlite",
+               "storage": "testdb.sqlite",
+               //THIS IS VERY USEFUL TO CHANGE if you are debugging some tests
+               "logging": false
+              },
+        "develMode": true,
+        "baseUrl": baseUrl,
+        "port": port,
+        "sessionSecret": "testing stuff",
+        "fakeRedis": true,
+        "domain_whitelist": {
+          "example.com": { "proto": "http",
+                           "extraProperties": [
+                             {"name": "og:type", "value": "cause"},
+                             {"name": "og:site_name", "value": "Test Site Name"}
+                           ]
+                         }
+        }
+      }, true);
+
+      return app.db.schema.Sharer.destroy({truncate:true})
+    })
+
+    testEventSuccess()
+  })
 
   after(app.shutdown);
 });

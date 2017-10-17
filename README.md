@@ -83,7 +83,7 @@ if you haven't already, install pm2
 $sudo npm install pm2 --global
 pm2 pm2.yml --env production
 
-### AWS Lambda (serverless deploy)
+#### AWS Lambda (serverless deploy)
 
 1. Make an RDS postgres database and Redis instance (for session storage)
 2. Set the config variables into a file called `./config/lambda.json`
@@ -104,3 +104,10 @@ pm2 pm2.yml --env production
    `claudia create --handler lambda.handler --deploy-proxy-api <MORE OPTIONS HERE>`
    Run (`claudia create --help` for more info. We recommend running behind a vpc, with a security group, etc)
    It's also likely you will need to use the `--use-s3-bucket` option because the final lambda zip file will be large.
+
+### Caching
+
+If you expect traffic for ~1 million shares for a single url or more than ~300k clicks/actions per hour,
+then we recommend enabling our Redis caching layer.
+
+See [/docs/CACHING.md](./docs/CACHING.md)

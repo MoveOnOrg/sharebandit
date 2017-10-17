@@ -93,6 +93,9 @@ SchemaActions.prototype = {
   },
   processData: function() {
     return this.redisActions.processData(this.dbActions)
+  },
+  processDataIncrementally: function(shouldContinue) {
+    return this.redisActions.processDataIncrementally(this.dbActions, shouldContinue)
   }
 }
 
@@ -103,7 +106,15 @@ function RedisSchemaActions(redis) {
 RedisSchemaActions.prototype = {
   loadMetadataIntoCache: function(metadata) {
     // console.log('loadmetadataintocache', metadata.toJSON())
-    this.redis.set('METADATA_'+metadata.id, JSON.stringify(metadata.toJSON()), function(err, data){})
+    var metadataKey = 'METADATA_'+metadata.id
+    this.redis.multi([
+      ['set', metadataKey, JSON.stringify(metadata.toJSON())],
+      ['expire', metadataKey, 60*60] // 1 hour
+    ]).exec(function(err, data) {
+      if (err) {
+        console.log('error saving metadata cache', metadata.id, err)
+      }
+    })
   },
   loadTrialDataIntoCache: function(url, trials, dbActions) {
     var r = this.redis
@@ -187,10 +198,12 @@ RedisSchemaActions.prototype = {
     })
   },
   newEvent: function(abver, abid, isAction) {
+    var startTimes = [new Date()]
     var r = this.redis
     var event = (isAction ? 'action' : 'success')
     return new Promise(function (newEventResolve, newEventReject) {
       r.get('METADATA_'+abver, function(err, metadata) {
+        startTimes.push(new Date())
         if (err) {
           return newEventReject(err)
         } else {
@@ -210,11 +223,14 @@ RedisSchemaActions.prototype = {
               ['expire', ('sb_total_'+abver), 86400] // 1 day
             ]
             r.multi(commands).exec(function(err, abver, abid, results) {
+              startTimes.push(new Date())
               if (err) {
                 newEventReject(err)
               } else {
                 // console.log('completed cached response', results, metadata)
                 // not sure what value is useful here....
+                var endTime = new Date()
+                console.log(startTimes.map(function(x){return endTime - x}))
                 newEventResolve(metadata)
               }
             })
@@ -262,7 +278,55 @@ RedisSchemaActions.prototype = {
       })
     })
   },
-  processData: function(dbActions, maxProcessCount) {
+  getProcessKeys: function(r, events, maxProcessCount, startOffset, callback) {
+      r.multi(events.map(function(e) { return ['hgetall', 'PROCESS_'+e] })).exec(function(err, shareEventsPerEvent) {
+        if (err) {
+          return callback(err, [], {})
+        }
+        var allShareEvents = {}
+        shareEventsPerEvent.forEach(function(shareEvents, i) {
+          // moves [{[abid_abid] => <metric count>}, ... ] to {[abid_abid] => {[<metric>]:<count>}
+          for (var abver_abid in shareEvents) {
+            if (!(abver_abid in allShareEvents)) {
+              allShareEvents[abver_abid] = {}
+            }
+            allShareEvents[abver_abid][events[i]] = shareEvents[abver_abid]
+          }
+        })
+        // console.log('cached events to process', err, allShareEvents)
+        var baseSlice = Object.keys(allShareEvents)
+        baseSlice.sort(function(a,b) {
+          // reverse sorts by total of both event successMetrics
+          var aTotal = (allShareEvents[a].action || 0) + (allShareEvents[a].success || 0);
+          var bTotal = (allShareEvents[b].action || 0) + (allShareEvents[b].success || 0);
+          return bTotal - aTotal
+        })
+        callback(err, baseSlice, allShareEvents)
+      })
+  },
+  processDataIncrementally: function(dbActions, shouldContinue) {
+    // This runs processData in batches of 100 to avoid over-large sql commands
+    var self = this
+    var maxProcessCount = 100
+    return new Promise(function (processDataResolve, processDataReject) {
+      var anotherRound = function(data) {
+        var newOffset = data.startOffset + maxProcessCount
+        if (newOffset >= data.allKeys.length
+            || !shouldContinue(1000 * 60 * 20) // give ourselves 20 seconds, at least
+           ) {
+          return processDataResolve()
+        }
+        self.processData(dbActions, data.allKeys, data.allShareEvents, maxProcessCount, newOffset)
+          .then(anotherRound, processDataReject)
+      };
+      self.processData(dbActions, null, null, 100, 0)
+        .then(function(data) {
+          processDataResolve()
+        }, processDataReject)
+    })
+  },
+  processData: function(dbActions, sliceOfKeys, allShareEvents, maxProcessCount, startOffset) {
+    var self = this
     var r = this.redis
     var events = ['success', 'action']
     var dbRecords = {}
@@ -270,27 +334,31 @@ RedisSchemaActions.prototype = {
     return new Promise(function (processDataResolve, processDataReject) {
       // For each successMetric....
       // 1. get all PROCESS_{success,action} keys
-      //    TODO: figure out how to do this incrementally 100-at-a-time (without just redoing same top keys)
       // 2. find out which ones already have sharer records in the db
       // 3. then create new ones for non-existing records, and update counts for existing ones
-      r.multi(events.map(function(e) { return ['hgetall', 'PROCESS_'+e] })).exec(function(err, shareEventsPerEvent) {
-        var allShareEvents = {}
-        shareEventsPerEvent.forEach(function(shareEvents, i) {
-          // moves [{[abid_abid] => <metric count>}, ... ] to {[abid_abid] => {[<metric>]:<count>}
-          for (var s in shareEvents) {
-            if (!(s in allShareEvents)) {
-              allShareEvents[s] = {}
-            }
-            allShareEvents[s][events[i]] = shareEvents[s]
-          }
-        })
-        // console.log('cached events to process', err, allShareEvents)
-        var baseSlice = Object.keys(allShareEvents)
+      var getProcessKeys = function(r, events, maxProcessCount, startOffset, func){
+        return func(null, sliceOfKeys, allShareEvents)
+      }
+      if (!sliceOfKeys) {
+        getProcessKeys = self.getProcessKeys
+      }
+      getProcessKeys(r, events, maxProcessCount, startOffset, function(err, baseSlice, allShareEvents) {
+        var rv = {'allKeys': baseSlice,
+                  'allShareEvents': allShareEvents,
+                  'startOffset': startOffset || 0,
+                  'processCount': maxProcessCount}
+        if (err) {
+          return processDataReject(err)
+        }
+        var keySliceToProcess = baseSlice
+        if (maxProcessCount) {
+          keySliceToProcess = baseSlice.slice(startOffset || 0, maxProcessCount)
+        }
         dbActions.schema.Sharer.findAll({
           attributes: ['id', 'key', 'trial'],
           where: {
             key: {
-              $in: baseSlice.map(function(redisKey){ return redisKey.split('_')[1] }) //abid
+              $in: keySliceToProcess.map(function(redisKey){ return redisKey.split('_')[1] }) //abid
             }
           }
         }).then(function(dbSharers) {
@@ -301,8 +369,8 @@ RedisSchemaActions.prototype = {
           dbActions.sequelize.transaction(function(t) {
             return new Promise(function (completeTransaction, rollbackTransaction) {
               var newToDb = {}
-              for (var i=0,l=baseSlice.length; i<l; i++) {
-                var abver_abid = baseSlice[i]
+              for (var i=0,l=keySliceToProcess.length; i<l; i++) {
+                var abver_abid = keySliceToProcess[i]
                 var split_abver_abid = abver_abid.split('_')
                 events.forEach(function(event) {
                   var updateCount = allShareEvents[abver_abid][event]
@@ -337,7 +405,7 @@ RedisSchemaActions.prototype = {
           }).then(function(transactionComplete) {
             // now that we saved to the db, we can decrement/clear the process values
             var commands = []
-            baseSlice.forEach(function(abver_abid) {
+            keySliceToProcess.forEach(function(abver_abid) {
               events.forEach(function(event) {
                 if (!allShareEvents[abver_abid][event]) {
                   return // skip event-(abver-abid) pair, since no key exists
@@ -361,7 +429,7 @@ RedisSchemaActions.prototype = {
                 // so will fall through to resolving
               }
               if (++completed) {
-                processDataResolve()
+                processDataResolve(rv)
               }
             })
           }, function(transactionErr) {
@@ -433,6 +501,7 @@ DBSchemaActions.prototype = {
     })
   },
   newEvent: function(abver, abid, isAction, metadataRetrievalCallback) {
+    var startTime = new Date()
     var schema = this.schema
     var sequelize = this.sequelize
     var EVENT_KEY = (isAction ? 'action_count' : 'success_count')
@@ -472,7 +541,11 @@ DBSchemaActions.prototype = {
                     })
                 }, rejlog)
               });
-            }).then(newEventResolve, newEventReject)
+            }).then(function(data) {
+              var endTime = new Date()
+              console.log(endTime - startTime)
+              newEventResolve(data)
+            }, newEventReject)
         } else {
           newEventReject('metadata not found ' + abver)
         }
@@ -513,6 +586,9 @@ DBSchemaActions.prototype = {
     )
   },
   processData: function() {
+    return Promise.resolve()
+  },
+  processDataIncrementally: function(shouldContinue) {
     return Promise.resolve()
   }
 }

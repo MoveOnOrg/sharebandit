@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node_modules/.bin/istanbul test node_modules/.bin/_mocha -- tests/index.js"
+    "test": "node_modules/.bin/istanbul test node_modules/.bin/_mocha -- tests/index.js",
+    "cronjob": "node ./cronProcess.js"
   },
   "author": "",
   "license": "GPLv2+",
