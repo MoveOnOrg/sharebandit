@@ -116,6 +116,23 @@ SchemaActions.prototype = {
 
 function RedisSchemaActions(redis) {
   this.redis = redis;
+  // This implements both:
+  // * retrieving url/trial metadata and bandit-needed data in cache
+  // * storing (for later sync) new shares and events
+  // * caching metadata from database results for the corresponding function
+  // With redis we organize the data into several namespaces:
+  // 1. STRING: 'METADATA_<abver>' (i.e. metadata.id) value=(JSON of result)
+  //    * Purpose is to return metadata results for facebook and api calls
+  //    * Expires 1 hour after use, so that changes in trial metadata can be reflected reasonably quickly
+  // 2. SET: 'URL_<url>' members=id(=abver)s in Metadata.id representing the different trials/treatments
+  //    * Purpose for bandit algorithm and apis to gather all relevant abver info for a given url
+  // 3. HYPERLOGLOG SET: 'sb_total_<abver>': all abids (i.e. sharer.key) for an abver/trial
+  //    HYPERLOGLOG SET: 'sb_{success,action}_<abver>': all abids for a given success metric that had one or more event
+  //    * Purpose is for bandit algorithm to track success vs. total counts for each abver
+  //    * Expires 1 day after last use
+  // 4. HASH: 'PROCESS_{success,action}': key='<abver>_<abid>' value=(count of unsync'd events for the abver-abid keypair
+  //    * Purpose is to bulk process events rather than do writes incrementally to the database
+  //    * Keys are cleared when value=0 (i.e. nothing to process after one full cycle)
 }
 
 RedisSchemaActions.prototype = {

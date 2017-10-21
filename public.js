@@ -210,6 +210,7 @@ var init = function(app, schema, schemaActions, config) {
   app.get('/json/:domain*', json_result('success'));
   app.get('/jsonaction/:domain*', json_result('success'));
 
+  app.set('jsonp callback name', 'callback');
   app.get('/jsonall/:domain*', function (req, res) {
     var params = {variants: []};
 
@@ -225,8 +226,7 @@ var init = function(app, schema, schemaActions, config) {
         result.dataValues.shareUrl = app._shareUrl(result.dataValues.url, result.dataValues.id);
         params.variants.push(result.dataValues);
       });
-      app.set('jsonp callback name', 'callback');
-      return res.jsonp (params);
+      return res.jsonp(params);
     });
   });
 }
