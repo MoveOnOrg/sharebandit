@@ -46,17 +46,32 @@ SchemaActions.prototype = {
     var redisActions = this.redisActions;
     var dbActions = this.dbActions;
     // console.log('new share', newsharer, abver)
-    return new Promise(function (newEventResolve, newEventReject) {
+    return new Promise(function (newShareResolve, newShareReject) {
       redisActions.newShare(newsharer, abver)
-        .then(newEventResolve,
+        .then(newShareResolve,
           function(err) {
             dbActions.newShare(newsharer, abver)
-              .then(newEventResolve, newEventReject);
+              .then(newShareResolve, newShareReject);
           });
     });
   },
   trialLookup: function(url, abver) {
-    return this.dbActions.trialLookup(url, abver);
+    var redisActions = this.redisActions;
+    var dbActions = this.dbActions;
+    return new Promise(function (trialLookupResolve, trialLookupReject) {
+      redisActions.trialLookup(url, abver).then(function(data) {
+        if (data) {
+          trialLookupResolve(data)
+        } else {
+          dbActions.trialLookup(url, abver).then(function(dbData) {
+            if (dbData) {
+              redisActions.loadMetadataIntoCache(dbData)
+            }
+            trialLookupResolve(dbData)
+          }, trialLookupReject);
+        }
+      }, trialLookupReject)
+    })
   },
   getSuccessfulShareCountsByTrial: function(url, successMetric) {
     var redisActions = this.redisActions;
