@@ -197,32 +197,38 @@ var init = function(app, schema, schemaActions, config) {
 
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
       bandit.choose(murl, successMetric, schemaActions).then(function(trialChoice) {
-        // sky: caching: get metadata
-        schema.Metadata.findAll({where: {id: trialChoice}, plain:true, attributes: ['id', 'url', 'headline','text','image_url']}).then(function(results) {
-          var r= results.toJSON();
-          r.shareurl= app._shareUrl('', trialChoice) + murl;
-          return res.jsonp(r);
+        schemaActions.trialLookup(murl, trialChoise).then(function(trialMetadata) {
+          res.jsonp({
+            'id': trialMetadata.id,
+            'url': trialMetadata.url,
+            'headline': trialMetadata.headline,
+            'text': trialMetadata.text,
+            'image_url': trialMetadata.image_url,
+            'shareurl': app._shareUrl('', trialChoice) + murl
+          });
+        }, function(err) {
+          console.error('trial metadata not found', err)
         });
       });
     };
   };
 
   app.get('/json/:domain*', json_result('success'));
-  app.get('/jsonaction/:domain*', json_result('success'));
+  app.get('/jsonaction/:domain*', json_result('action'));
 
   app.set('jsonp callback name', 'callback');
   app.get('/jsonall/:domain*', function (req, res) {
-    var params = {variants: []};
+    var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
+    var params = {'url': murl, 'variants': []};
 
     //res.setHeader('Content-Type', 'application/json');
-    // sky: caching: gets all the url trials
+    // TODO: caching: gets all the url trials, but need success/action/trial counts
     schema.Metadata.findAll({
       where: {
-        url: req.params.domain + req.params[0]
+        url: murl
       }
     }).then(function(results) {
       _.forEach(results, function(result) {
-        params.url = result.dataValues.url;
         result.dataValues.shareUrl = app._shareUrl(result.dataValues.url, result.dataValues.id);
         params.variants.push(result.dataValues);
       });
