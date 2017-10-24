@@ -109,8 +109,8 @@ SchemaActions.prototype = {
   processData: function() {
     return this.redisActions.processData(this.dbActions);
   },
-  processDataIncrementally: function(shouldContinue) {
-    return this.redisActions.processDataIncrementally(this.dbActions, shouldContinue);
+  processDataIncrementally: function(shouldContinue, options) {
+    return this.redisActions.processDataIncrementally(this.dbActions, shouldContinue, options);
   }
 };
 
@@ -332,25 +332,32 @@ RedisSchemaActions.prototype = {
       callback(err, baseSlice, allShareEvents);
     });
   },
-  processDataIncrementally: function(dbActions, shouldContinue) {
+  processDataIncrementally: function(dbActions, shouldContinue, options) {
     // This runs processData in batches of 100 to avoid over-large sql commands
     var self = this;
     var maxProcessCount = 100;
     return new Promise(function (processDataResolve, processDataReject) {
+
       var anotherRound = function(data) {
+        console.log('processing data', data.startOffset, (data.allKeys || []).length, Object.keys(data || {}))
         var newOffset = data.startOffset + maxProcessCount;
-        if (newOffset >= data.allKeys.length
-            || !shouldContinue(1000 * 60 * 20) // give ourselves 20 seconds, at least
-        ) {
+        if (!shouldContinue(1000 * 60 * 20) // give ourselves 20 seconds, at least
+            || (options && options.onlyOnce && newOffset >= (data.allKeys || []).length)
+           ) {
           return processDataResolve();
+        } else if (newOffset >= data.allKeys.length) {
+          setTimeout(function() { // wait 2 seconds before starting from scratch
+            self.processData(dbActions, null, null, 100, 0)
+              .then(anotherRound, processDataReject);
+          }, 2000)
+        } else {
+          self.processData(dbActions, data.allKeys, data.allShareEvents, maxProcessCount, newOffset)
+            .then(anotherRound, processDataReject);
         }
-        self.processData(dbActions, data.allKeys, data.allShareEvents, maxProcessCount, newOffset)
-          .then(anotherRound, processDataReject);
       };
+
       self.processData(dbActions, null, null, 100, 0)
-        .then(function(data) {
-          processDataResolve();
-        }, processDataReject);
+        .then(anotherRound, processDataReject);
     });
   },
   processData: function(dbActions, sliceOfKeys, allShareEvents, maxProcessCount, startOffset) {
@@ -371,6 +378,7 @@ RedisSchemaActions.prototype = {
         getProcessKeys = self.getProcessKeys;
       }
       getProcessKeys(r, events, maxProcessCount, startOffset, function(err, baseSlice, allShareEvents) {
+        // console.log('DEBUG keys', Object.keys(allShareEvents))
         var rv = {'allKeys': baseSlice,
           'allShareEvents': allShareEvents,
           'startOffset': startOffset || 0,
@@ -395,6 +403,7 @@ RedisSchemaActions.prototype = {
             dbRecords[dbShare.dataValues.trial + '_' + dbShare.dataValues.key] = dbShare.dataValues.id;
           });
           dbActions.sequelize.transaction(function(t) {
+            // console.log('DEBUG transactioning: keys:', keySliceToProcess.length)
             return new Promise(function (completeTransaction, rollbackTransaction) {
               var newToDb = {};
               for (var i=0,l=keySliceToProcess.length; i<l; i++) {
@@ -420,6 +429,7 @@ RedisSchemaActions.prototype = {
                 });
               }
               var newSharers = Object.keys(newToDb).map(function(s) {return newToDb[s]; });
+              // console.log('DEBUG new Sharers', newSharers.length)
               if (newSharers.length) {
                 dbActions.schema.Sharer.bulkCreate(newSharers,
                   {transaction: t}).then(function(success) {
@@ -428,6 +438,8 @@ RedisSchemaActions.prototype = {
                   console.error('bulk create error', err);
                   rollbackTransaction(err);
                 });
+              } else {
+                completeTransaction();
               }
             });
           }).then(function(transactionComplete) {
@@ -439,6 +451,7 @@ RedisSchemaActions.prototype = {
                   return; // skip event-(abver-abid) pair, since no key exists
                 }
                 var updateCount = parseInt(allShareEvents[abver_abid][event]);
+                // console.log('DEBUG UPDATING KEYS', abver_abid, updateCount)
                 if (updateCount) {
                   commands.push(['hincrby', 'PROCESS_'+event, abver_abid, -updateCount]);
                 } else { // either 0 or null, so we should purge the key

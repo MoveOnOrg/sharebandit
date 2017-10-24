@@ -1,5 +1,9 @@
 config/config.json
-config/lambda.json
+## WARNING: lambda.json needs to stay out of .gitignore
+## or it won't be uploaded by claudia
+## KEEP IGNORED
+#config/lambda.json
+## ^^^^ KEEP IGNORED
 claudia.json
 nginx/htpasswd
 *~
