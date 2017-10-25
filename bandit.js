@@ -1,11 +1,7 @@
 var PD = require("probability-distributions");
 var Promise = require("bluebird");
 
-var bayesBandit = function(url, sequelize, successMetric) {
-  return getUrlTrials(url, sequelize, successMetric, chooseFromVariants);
-}
-var getUrlTrials = function(url, sequelize, successMetric, func) {
-
+var bayesBandit = function(url, successMetric, schemaActions) {
   // returns a Promise which will resolve to a 'trial' choice for the url
 
   // algorithm summary
@@ -24,52 +20,14 @@ var getUrlTrials = function(url, sequelize, successMetric, func) {
   //      rbeta is basically doing some logarithmic/exponent stuff
   //      but really only about ~5 per rbeta call, so it'll be pretty fast
   
-  var query = ('SELECT trial, sum(case when Sharers.{{success_field}}_count > 0 then 1 else 0 end) AS success, count(key) AS trials'
-                 +' FROM Sharers'
-                 +' JOIN Metadata on (Metadata.id = Sharers.trial)'
-                 +' WHERE Metadata.url = ? GROUP BY trial')
-              .replace('{{success_field}}',
-                       ((successMetric == 'action') ? 'action' : 'success')
-                      );
-
+  return getUrlTrials(url, successMetric, chooseFromVariants, schemaActions);
+}
+var getUrlTrials = function(url, successMetric, func, schemaActions) {
   return new Promise(function(resolve, reject) {
-      //TODO
-      // what is cacheable:
-      // * variant list:
-      //   * successes/trials
-      //   * in theory could generate a bunch at once and cache those
-      /*
-       cache_key_list = [ URLS ] (sorted by #hits, and then dropping dicts
-       cache_dict = {
-          <URL>: {
-            hits: 1, //this should decay each ...day?
-            variants: [
-               { // from db result
-                 trial: <var_id>,
-                 trials: <trial_count>,
-                 success: <trial_success>,
-
-                 // added
-                 // we should cache related to trials count
-                 rbeta_cache: []
-               }
-            ]
-            
-          }
-       }
-      */
-      sequelize
-        .query(
-          query,
-          {
-            replacements: [url],
-            type: sequelize.QueryTypes.SELECT
-          }
-        )
-        .then(function(variants) {
-          return func(variants, resolve, reject, 1);
-        });
+    schemaActions.getSuccessfulShareCountsByTrial(url, successMetric).then(function(variants) {
+      return func(variants, resolve, reject, 1);
     });
+  });
 };
 
 function chooseFromVariants(variants, resolve, reject, numResults) {

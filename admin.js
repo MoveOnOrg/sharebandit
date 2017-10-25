@@ -60,6 +60,7 @@ addEditPost = function (req, res) {
       version: req.body.version[key]
     };
 
+    // sky: caching: clear/update metadata
     if (key == 'new') {
       if (
         metadata.headline != '' ||

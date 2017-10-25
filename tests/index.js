@@ -1,8 +1,10 @@
 var app = require('../index');
+var bandit = require('../bandit');
 
 var request = require('request');
 var Promise = require("bluebird");
 var expect = require('expect.js');
+var realApp;
 
 //Things to test
 //  create two versions of a url, with img, title
@@ -26,7 +28,7 @@ describe('server', function() {
   var baseUrl = "http://localhost:" + port;
 
   before(function() {
-    app.boot({
+    realApp = app.boot({
       "db": {"dialect": "sqlite",
              "storage": "testdb.sqlite",
              //THIS IS VERY USEFUL TO CHANGE if you are debugging some tests
@@ -49,6 +51,7 @@ describe('server', function() {
       app.db.schema.Sharer.destroy({truncate:true}).catch(function(){
         //ignore failure which can happen if the db wasn't created yet
       });
+
       app.db.schema.Bandit.destroy({truncate:true}).catch(function(){});
       app.db.schema.Metadata.destroy({truncate:true}).catch(function(){});
     } catch(e) {
@@ -72,13 +75,13 @@ describe('server', function() {
   var TRIAL_REDIRECT_URLS = [];
   var SHARER_ABIDS = [123, 456]
   var TRIALS = [];
+  var ITER_TIMES = 20;
 
   var twentyAtATime = function(threshold, finalRun, action) {
       action = action || '/a/';
       // Basically this runs too slowly to be in 2000ms timeout, so we'll do it a bunch
       //  of times to inflate the results
       return function(done) {
-        var ITER_TIMES = 20;
         TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
           return (baseUrl + action + i + '/' + URL_AB_NOHTTP);
         });
@@ -169,6 +172,7 @@ describe('server', function() {
       var firstLineRegex = new RegExp('^//'+baseUrl+'/r/(\\d+)/');
       var timesEach = [0,0];
       //count a bunch of requests, and make sure we get some back from each trial version
+      TRIAL_JS_URL = baseUrl + '/js/' + URL_AB_NOHTTP;
       for (var i=0; i<iterTimes; i++) {
         request.get(TRIAL_JS_URL, function(err, response, body) {
           expect(response.statusCode).to.equal(200);
@@ -196,7 +200,7 @@ describe('server', function() {
       }));
   });
 
-  describe('success events: redirects,actions', function() {
+  var testEventSuccess = function() {
     it('20 random requests should NOT bias redirect results', twentyAtATime(0.8));
 
     it('should 404 on bad domain/url', function(done) {
@@ -276,13 +280,20 @@ describe('server', function() {
       }, function(err, response, body) {
         expect(response.statusCode).to.equal(302);
         expect(response.headers.location).to.contain(URL_AB + middlePart + SHARER_ABIDS[1]);
-        app.db.schema.Bandit.findAll().then(function(bandit_logs) {
-          app.db.schema.Metadata.findById(TRIALS[0])
-            .then(function(meta) {
-              expect(meta.success_count).to.equal(1);
-              done();
-            });
-        });
+        bandit.getUrlTrials(URL_AB_NOHTTP, 'success', function(trials) {
+          // Will return something like:
+          // [ { trial: 171, success: 1, trials: 19 },
+          //   { trial: 172, success: 0, trials: 6 } ]
+          // TRIALS[0] is the first trial
+          trials.filter(function(t) {
+            if (t.trial == TRIALS[0]) {
+              expect(t.success).to.equal(1);
+            } else {
+              expect(t.success).to.equal(0);
+            }
+          })
+          done();
+        }, realApp.schemaActions)
       })
     });
 
@@ -296,6 +307,7 @@ describe('server', function() {
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('should be biased toward the first trial', function(done) {
+      realApp.schemaActions.processDataIncrementally(function(){return true}, {onlyOnce:true}).then(function() {
           request.get(baseUrl + '/admin/reportjson/stats/' + TRIALS.join('-'), function(err, response, body) {
             var data = JSON.parse(body).results;
             for (var i=1;i<data.length;i++) {
@@ -307,8 +319,8 @@ describe('server', function() {
             }
             done();
           });
-        }
-      );
+      })
+    });
 
     it('should now be weighted with bandit', testJsBanditResponse(20, function(timesEach) {
       console.log('inbalance after 0.8 preference', timesEach);
@@ -316,7 +328,44 @@ describe('server', function() {
       return true;
     }))
 
-  });
+  }
+
+  describe('success events: redirects,actions: NO caching', function() {
+    testEventSuccess()
+  })
+
+  describe('success events: redirects,actions: caching ON', function() {
+    before(function() {
+      ITER_TIMES = 10; // fakeredis takes longer than sqlite (real redis IS fast)
+      port = port + 1
+      baseUrl = "http://localhost:" + port;
+
+      realApp = app.boot({
+        "db": {"dialect": "sqlite",
+               "storage": "testdb.sqlite",
+               //THIS IS VERY USEFUL TO CHANGE if you are debugging some tests
+               "logging": false
+              },
+        "develMode": true,
+        "baseUrl": baseUrl,
+        "port": port,
+        "sessionSecret": "testing stuff",
+        "fakeRedis": true,
+        "domain_whitelist": {
+          "example.com": { "proto": "http",
+                           "extraProperties": [
+                             {"name": "og:type", "value": "cause"},
+                             {"name": "og:site_name", "value": "Test Site Name"}
+                           ]
+                         }
+        }
+      }, true);
+
+      return app.db.schema.Sharer.destroy({truncate:true})
+    })
+
+    testEventSuccess()
+  })
 
   after(app.shutdown);
 });

@@ -2,9 +2,8 @@ var url = require('url');
 var _ = require('lodash');
 var bandit = require('./bandit.js');
 var Promise = require("bluebird");
-var Sequelize = require('sequelize');
 
-var init = function(app, schema, sequelize, config) {
+var init = function(app, schema, schemaActions, config) {
 
   app._shareUrl = function(href, abver) {
     //based on href and abver, generate a url that can be shared
@@ -53,9 +52,7 @@ var init = function(app, schema, sequelize, config) {
             if (/facebookexternalhit|Facebot/.test(req.get('User-Agent')) && parseInt(req.params.abver) >= 0 ) {
 
               var murl = (req.params.domain + decodeURIComponent(pathname || '/').replace(/.fb\d+/,''));
-              schema.Metadata.findOne({
-                'where': { 'url':murl, 'id':parseInt(req.params.abver)}
-              }).then(function(trial) {
+              schemaActions.trialLookup(murl, parseInt(req.params.abver)).then(function(trial) {
                 if (!trial) {
                   if (/testshare/.test(pathname)) {
                     res.render('shareheaders', {
@@ -103,21 +100,7 @@ var init = function(app, schema, sequelize, config) {
                     var newsharer = {'key': req.query.abid,
                                      'trial': (parseInt(req.params.abver) || 0)
                                     };
-                    sequelize.transaction(function(t) {
-                      //ideally, we'd pass a Promise.all and serialize this, for easier readability, if nothing else
-                      // but that really f---s with the transaction, so better to do callback hell here
-                      return new Promise(function (resolve, reject) {
-                        schema.Sharer.findOrCreate({'where': newsharer}).spread(function(sharer, created) {
-                          if (created) {
-                            schema.Metadata.findById(parseInt(req.params.abver) || 0).then(function(metadata) {
-                              metadata.increment('trial_count').then(resolve, reject);
-                            });
-                          } else {
-                            resolve();
-                          }
-                        })
-                      });
-                    }).then(function() {
+                    schemaActions.newShare(newsharer, parseInt(req.params.abver) || 0).then(function() {
                       if (req.params.abver) {
                         renderFacebook();
                       }
@@ -141,52 +124,21 @@ var init = function(app, schema, sequelize, config) {
               // e.g. with AND trial=(SELECT id FROM metadata WHERE url=$$trialurl) -- but that would slow it down
               if (req.params.abver) {
                 var cautious_id = (parseInt(req.params.abver) || 0);
-                schema.Metadata.findById(cautious_id).then(function(metadata) {
-                  if (metadata) {
-                    sequelize.transaction(/*{
-                                            deferrable: Sequelize.Deferrable.SET_IMMEDIATE,
-                                            isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
-                                            },*/
-                                          function(t) {
-                      //ideally, we'd pass a Promise.all and serialize this, for easier readability, if nothing else
-                      // but that really f---s with the transaction, so better to do callback hell here
-                      return new Promise(function (resolve, reject) {
-                        var rejlog = function() {
-                          //console.log('rejected!');
-                          reject();
-                        };
-                        //1.
-                        metadata.increment('success_count', {transaction: t}).then(function() {
-                          //2.
-                          schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''),
-                                                             'trial': cautious_id},
-                                                      transaction: t
-                                                     })
-                            .spread(function(sharer, created) {
-                              //3.
-                              sharer.increment('success_count', {transaction: t}).then(
-                                function() {
-                                  //4.
-                                  schema.Bandit.create({'trial': cautious_id,
-                                                        'action': false}, {transaction: t}).then(resolve, rejlog);
-                                }, rejlog);
-                            })
-                        }, rejlog)
-                      });
-                    }).then(function(value) {
-                      if (req.query.absync) {
-                        res.redirect(furl);
-                      }
-                    }, function(reason) {
-                      console.log('Failed save of transaction ' + req.originalUrl
-                                  + ' -- ' + reason);
-                    });
-                  }
-                });
+                schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/false)
+                  .then(function(value) {
+                    if (req.query.absync) {
+                      res.redirect(furl);
+                    }
+                  }, function(reason) {
+                    console.log('Failed save of transaction ' + req.originalUrl
+                                + ' -- ' + reason);
+                    if (req.query.absync) {
+                      res.redirect(furl); // redirect anyway, since the client shouldn't care
+                    }
+                  });
               }
             }
-          }
-         );
+          });
 
   //smallest GIF
   //http://probablyprogramming.com/2009/03/15/the-tiniest-gif-ever
@@ -203,42 +155,13 @@ var init = function(app, schema, sequelize, config) {
               res.end(smallgif, 'binary');
             }
             if (req.params.abver) {
-              sequelize.transaction(/*{
-                                      deferrable: Sequelize.Deferrable.SET_IMMEDIATE,
-                                      isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
-                                      },*/ function(t) {
-                //ideally, we'd pass a Promise.all and serialize this, for easier readability, if nothing else
-                // but that really f---s with the transaction, so better to do callback hell here
-                return new Promise(function(resolve, reject) {
-                  var rejlog = function() {
-                    //console.log('rejected!');
-                    reject();
-                  };
-                  var cautious_id = (parseInt(req.params.abver) || 0);
-                  //action 1.
-                  schema.Sharer.findOrCreate({where:{'key':(req.query.abid || ''),
-                                                     'trial': cautious_id},
-                                              transaction: t
-                                             })
-                    .spread(function(sharer, created) {
-                      //action 2.
-                      sharer.increment('action_count', {transaction: t}).then(function() {
-                        schema.Metadata.findById(cautious_id, {transaction: t}).then(function(metadata) {
-                          //action 3.
-                          metadata.increment('action_count', {transaction: t}).then(
-                                function() {
-                                  //action 4.
-                                  schema.Bandit.create({'trial':cautious_id, 'action':true}, {transaction: t}).then(resolve, rejlog);
-                                }, rejlog);
-                        });
-                      }, rejlog);
-                    });
-                })
-              }).then(function() {
-                if (req.query.absync) {
-                  res.end(smallgif, 'binary');
-                }
-              });
+              var cautious_id = (parseInt(req.params.abver) || 0);
+              schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/true)
+                .then(function() {
+                  if (req.query.absync) {
+                    res.end(smallgif, 'binary');
+                  }
+                });
             } else {
               if (req.query.absync) {
                 res.end(smallgif, 'binary');
@@ -255,7 +178,7 @@ var init = function(app, schema, sequelize, config) {
 
       var proto = config.domain_whitelist[req.params.domain].proto;
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
-      bandit.choose(murl, sequelize, successMetric).then(function(trialChoice) {
+      bandit.choose(murl, successMetric, schemaActions).then(function(trialChoice) {
         var burl = app._shareUrl('', trialChoice);
         return res.render('jsshare', {baseUrl: burl, abver: trialChoice});
       });
@@ -273,35 +196,43 @@ var init = function(app, schema, sequelize, config) {
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
-      bandit.choose(murl, sequelize, successMetric).then(function(trialChoice) {
-        schema.Metadata.findAll({where: {id: trialChoice}, plain:true, attributes: ['id', 'url', 'headline','text','image_url']}).then(function(results) {
-          var r= results.toJSON();
-          r.shareurl= app._shareUrl('', trialChoice) + murl;
-          return res.jsonp(r);
+      bandit.choose(murl, successMetric, schemaActions).then(function(trialChoice) {
+        schemaActions.trialLookup(murl, trialChoise).then(function(trialMetadata) {
+          res.jsonp({
+            'id': trialMetadata.id,
+            'url': trialMetadata.url,
+            'headline': trialMetadata.headline,
+            'text': trialMetadata.text,
+            'image_url': trialMetadata.image_url,
+            'shareurl': app._shareUrl('', trialChoice) + murl
+          });
+        }, function(err) {
+          console.error('trial metadata not found', err)
         });
       });
     };
   };
 
   app.get('/json/:domain*', json_result('success'));
-  app.get('/jsonaction/:domain*', json_result('success'));
+  app.get('/jsonaction/:domain*', json_result('action'));
 
+  app.set('jsonp callback name', 'callback');
   app.get('/jsonall/:domain*', function (req, res) {
-    var params = {variants: []};
+    var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
+    var params = {'url': murl, 'variants': []};
 
     //res.setHeader('Content-Type', 'application/json');
+    // TODO: caching: gets all the url trials, but need success/action/trial counts
     schema.Metadata.findAll({
       where: {
-        url: req.params.domain + req.params[0]
+        url: murl
       }
     }).then(function(results) {
       _.forEach(results, function(result) {
-        params.url = result.dataValues.url;
         result.dataValues.shareUrl = app._shareUrl(result.dataValues.url, result.dataValues.id);
         params.variants.push(result.dataValues);
       });
-      app.set('jsonp callback name', 'callback');
-      return res.jsonp (params);
+      return res.jsonp(params);
     });
   });
 }

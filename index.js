@@ -21,10 +21,11 @@ var OAuth2 = google.auth.OAuth2;
 var googleAuth = require('./lib/google-auth');
 var swig  = require('swig');
 var Sequelize = require('sequelize');
+var SchemaActionModel = require('./schema-actions.js')
 
 var dbconn = {};
 var server;
-
+var redis;
 var shutdown = function() {
   server.close();
 }
@@ -42,9 +43,17 @@ var boot = function(config, startOnPort) {
     resave: true,
     saveUninitialized: false
   }
-  if (config.redisSessionStore) {
+  if (config.redisSessionStore || config.redisStore || config.fakeRedis) {
+    if (config.fakeRedis) {
+      redis = require("fakeredis").createClient()
+    } else if (config.redisStore) {
+      redis = require("redis").createClient(config.redisStore)
+    }
+    var redisSessionConfig = (config.fakeRedis
+                              ? {client: redis }
+                              : config.redisSessionStore || config.redisStore)
     var RedisStore = require('connect-redis')(session);
-    sessionConfig['store'] = new RedisStore(config.redisSessionStore);
+    sessionConfig['store'] = new RedisStore(redisSessionConfig);
   }
 
   // Configure Express app
@@ -77,8 +86,10 @@ var boot = function(config, startOnPort) {
   sequelize.authenticate();
   dbconn.ready = sequelize.sync()
 
+  var schemaActions = SchemaActionModel(schema, sequelize, redis);
+
   //VIEWS
-  var public_views = require('./public.js')(app, schema, sequelize, config);
+  var public_views = require('./public.js')(app, schema, schemaActions, config);
 
   var adminauth;
   if (/\/\/localhost/.test(config.baseUrl) && config.develMode) {
@@ -123,6 +134,7 @@ var boot = function(config, startOnPort) {
       }
     });
   }
+  app.schemaActions = schemaActions
   return app
 }
 
