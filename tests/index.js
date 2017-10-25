@@ -307,7 +307,7 @@ describe('server', function() {
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('20 requests should bias redirect results', twentyAtATime(0.8));
     it('should be biased toward the first trial', function(done) {
-      realApp.schemaActions.processDataIncrementally(function(){return true}).then(function() {
+      realApp.schemaActions.processDataIncrementally(function(){return true}, {onlyOnce:true}).then(function() {
           request.get(baseUrl + '/admin/reportjson/stats/' + TRIALS.join('-'), function(err, response, body) {
             var data = JSON.parse(body).results;
             for (var i=1;i<data.length;i++) {
