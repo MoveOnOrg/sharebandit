@@ -40,7 +40,7 @@ var boot = function(config, startOnPort) {
 
   var sessionConfig = {
     secret: config.sessionSecret,
-    resave: true,
+    resave: false,
     saveUninitialized: false
   }
   if (config.redisSessionStore || config.redisStore || config.fakeRedis) {
@@ -57,7 +57,15 @@ var boot = function(config, startOnPort) {
   }
 
   // Configure Express app
-  app.use(session(sessionConfig));
+  var sessionInstance = session(sessionConfig)
+  app.use(function(req, res, next) {
+    // This stops session stuff except for admin contexts
+    if (/^\/($|admin|auth)/.test(req.path)) {
+      return sessionInstance(req, res, next)
+    } else {
+      next()
+    }
+  });
   app.use(express.static(__dirname + '/static'));
   app.use(bodyParser.urlencoded({ extended: true }));
   app.engine('html', swig.renderFile);
