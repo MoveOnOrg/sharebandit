@@ -75,13 +75,13 @@ describe('server', function() {
   var TRIAL_REDIRECT_URLS = [];
   var SHARER_ABIDS = [123, 456]
   var TRIALS = [];
+  var ITER_TIMES = 20;
 
   var twentyAtATime = function(threshold, finalRun, action) {
       action = action || '/a/';
       // Basically this runs too slowly to be in 2000ms timeout, so we'll do it a bunch
       //  of times to inflate the results
       return function(done) {
-        var ITER_TIMES = 15;
         TRIAL_REDIRECT_URLS = TRIALS.map(function(i) {
           return (baseUrl + action + i + '/' + URL_AB_NOHTTP);
         });
@@ -336,6 +336,7 @@ describe('server', function() {
 
   describe('success events: redirects,actions: caching ON', function() {
     before(function() {
+      ITER_TIMES = 10; // fakeredis takes longer than sqlite (real redis IS fast)
       port = port + 1
       baseUrl = "http://localhost:" + port;
 
