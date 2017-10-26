@@ -94,7 +94,7 @@ var boot = function(config, startOnPort) {
   sequelize.authenticate();
   dbconn.ready = sequelize.sync()
 
-  var schemaActions = SchemaActionModel(schema, sequelize, redis);
+  var schemaActions = SchemaActionModel(config, schema, sequelize, redis);
 
   //VIEWS
   var public_views = require('./public.js')(app, schema, schemaActions, config);

@@ -11,8 +11,6 @@
   "author": "",
   "license": "GPLv2+",
   "devDependencies": {
-    "axios": "^0.16.2",
-    "bluebird": "^3.5.0",
     "eslint": "^4.9.0",
     "expect.js": "^0.3.1",
     "fakeredis": "git://github.com/schuyler1d/fakeredis.git#hyperloglog-stub",
@@ -22,6 +20,7 @@
   },
   "dependencies": {
     "aws-serverless-express": "^3.0.2",
+    "bluebird": "^3.5.0",
     "body-parser": "^1.15.0",
     "connect-redis": "^3.3.0",
     "express": "^4.13.4",
@@ -32,6 +31,7 @@
     "jsdom": "^8.3.1",
     "lodash": "^4.17.4",
     "pg": "^4.4.6",
+    "preq": "^0.5.2",
     "probability-distributions": "^0.8.5",
     "sequelize": "^3.30.2",
     "sqlite3": "^3.1.2",
