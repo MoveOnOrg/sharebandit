@@ -1,5 +1,5 @@
 var Promise = require('bluebird');
-
+var facebookCacheUpdater = require('./lib/updateFacebookCache.js');
 /* Below are three objects:
  * DBSchemaActions: abstracted actions connecting through sequelize
  * RedisSchemaActions: abstracted actions for cached runtime
@@ -11,11 +11,12 @@ var Promise = require('bluebird');
  *        *should* function normally (and pass all the tests :-)
  */
 
-function SchemaActions(schema, sequelize, redis) {
+function SchemaActions(config, schema, sequelize, redis) {
+  this.config = config;
   this.schema = schema;
   this.sequelize = sequelize;
   this.redis = redis;
-  this.dbActions = new DBSchemaActions(schema, sequelize);
+  this.dbActions = new DBSchemaActions(config, schema, sequelize);
   if (redis) {
     this.redisActions = new RedisSchemaActions(redis);
   } else {
@@ -111,6 +112,9 @@ SchemaActions.prototype = {
   },
   processDataIncrementally: function(shouldContinue, options) {
     return this.redisActions.processDataIncrementally(this.dbActions, shouldContinue, options);
+  },
+  updateFacebookCache: function(shouldContinue, options) {
+    return facebookCacheUpdater(this.config, this.sequelize, options && options.interval);
   }
 };
 
@@ -512,7 +516,8 @@ AlwaysColdRedisSchemaActions.prototype = {
 };
 
 
-function DBSchemaActions(schema, sequelize) {
+function DBSchemaActions(config, schema, sequelize) {
+  this.config = config;
   this.schema = schema;
   this.sequelize = sequelize;
 }
@@ -628,13 +633,16 @@ DBSchemaActions.prototype = {
   },
   processDataIncrementally: function(shouldContinue) {
     return Promise.resolve();
+  },
+  updateFacebookCache: function(shouldContinue, options) {
+    return facebookCacheUpdater(this.config, this.sequelize, options && options.interval);
   }
 };
 
-module.exports = function(schema, sequelize, redis) {
+module.exports = function(config, schema, sequelize, redis) {
   if (redis) {
-    return new SchemaActions(schema, sequelize, redis);
+    return new SchemaActions(config, schema, sequelize, redis);
   } else {
-    return new DBSchemaActions(schema, sequelize);
+    return new DBSchemaActions(config, schema, sequelize);
   }
 };
