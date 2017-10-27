@@ -114,7 +114,7 @@ SchemaActions.prototype = {
     return this.redisActions.processDataIncrementally(this.dbActions, shouldContinue, options);
   },
   updateFacebookCache: function(shouldContinue, options) {
-    return facebookCacheUpdater(this.config, this.sequelize, options && options.interval);
+    return facebookCacheUpdater(this.config, this.schema, this.sequelize, options && options.interval);
   }
 };
 
@@ -635,7 +635,7 @@ DBSchemaActions.prototype = {
     return Promise.resolve();
   },
   updateFacebookCache: function(shouldContinue, options) {
-    return facebookCacheUpdater(this.config, this.sequelize, options && options.interval);
+    return facebookCacheUpdater(this.config, this.schema, this.sequelize, options && options.interval);
   }
 };
 
