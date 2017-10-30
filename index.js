@@ -127,7 +127,7 @@ var boot = function(config, startOnPort) {
 
   app.set('views', view_dirs);
 
-  var admin_views = require('./admin.js')(app, schema, sequelize, adminauth, config, moduleLinks);
+  var admin_views = require('./admin.js')(app, schema, sequelize, adminauth, config, moduleLinks, schemaActions);
 
   app.get('/',
           adminauth,  function (req, res) {

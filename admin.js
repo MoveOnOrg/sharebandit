@@ -3,19 +3,20 @@ var url = require('url');
 var bandit = require('./bandit.js');
 var scrape = require('./lib/ogscraper.js');
 
-var init = function(app, schema, sequelize, adminauth, config, moduleLinks) {
+var init = function(app, schema, sequelize, adminauth, config, moduleLinks, schemaActions) {
 
 var templateEnv = {
   "googleClientId": (config.oauth && config.oauth.clientId) || '',
   "staticBaseUrl": config.staticBaseUrl || '//s3.amazonaws.com/s3.moveon.org'
-}
+};
+
+var protocolRegex =  /^([^:]+:\/\/)/;
 
 app.get('/admin/',
   adminauth,
   function (req, res) {
     var query = url.parse(req.url, true).query;
     var params = {'modules': moduleLinks, 'env': templateEnv};
-    var protocolRegex =  /^([^:]+:\/\/)/;
     var sqlQ = {
       offset: query.offset || 0,
       limit: 50,
@@ -41,8 +42,8 @@ app.get('/admin/',
 
 addEditPost = function (req, res) {
   var params = {};
-  var protocolRegex =  /^([^:]+:\/\/)/;
   var url = req.body.url.replace(protocolRegex, '');
+  url = url.replace(/\?.*/, ''); // strip parameters, because we do not support them
   var maxVersion = _.reduce(req.body.version, function(result, value, key) {
     if (key != 'new' && parseInt(value) > result) {
       return parseInt(value);
@@ -60,7 +61,6 @@ addEditPost = function (req, res) {
       version: req.body.version[key]
     };
 
-    // sky: caching: clear/update metadata
     if (key == 'new') {
       if (
         metadata.headline != '' ||
@@ -85,6 +85,7 @@ addEditPost = function (req, res) {
     else {
       metadata.id = key;
       schema.Metadata.update(metadata, {where: {id: key}});
+      schemaActions.loadMetadataIntoCache(metadata);
     }
 
   });
