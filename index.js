@@ -60,7 +60,7 @@ var boot = function(config, startOnPort) {
   var sessionInstance = session(sessionConfig)
   app.use(function(req, res, next) {
     // This stops session stuff except for admin contexts
-    if (/^\/($|admin|auth)/.test(req.path)) {
+    if (/^\/($|admin|auth|logout)/.test(req.path)) {
       return sessionInstance(req, res, next)
     } else {
       next()
