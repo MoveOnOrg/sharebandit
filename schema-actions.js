@@ -115,6 +115,9 @@ SchemaActions.prototype = {
   },
   updateFacebookCache: function(shouldContinue, options) {
     return facebookCacheUpdater(this.config, this.schema, this.sequelize, options && options.interval);
+  },
+  loadMetadataIntoCache: function(metadata) {
+    return this.redisActions.loadMetadataIntoCache(metadata);
   }
 };
 
@@ -636,6 +639,9 @@ DBSchemaActions.prototype = {
   },
   updateFacebookCache: function(shouldContinue, options) {
     return facebookCacheUpdater(this.config, this.schema, this.sequelize, options && options.interval);
+  },
+  loadMetadataIntoCache: function(metadata) {
+    return Promise.resolve();
   }
 };
 
