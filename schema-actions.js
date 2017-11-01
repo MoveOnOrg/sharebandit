@@ -426,6 +426,13 @@ RedisSchemaActions.prototype = {
                       }).spread(function(results, metadata) {}, function(err) {
                         console.error('ERROR update raw sql', err);
                       });
+
+                      dbActions.sequelize.query('UPDATE metadata SET '+event+'_count = (SELECT SUM('+event+'_count WHERE trial = ?) FROM sharers WHERE id = ?)', {
+                        replacements: [dbRecords[abver_abid], dbRecords[abver_abid]],
+                        transaction: t
+                      }).spread(function(results, metadata) {}, function(err) {
+                        console.error('ERROR update raw sql', err);
+                      });
                     }
                   } else {
                     if (!(abver_abid in newToDb)) {
@@ -440,6 +447,9 @@ RedisSchemaActions.prototype = {
               if (newSharers.length) {
                 dbActions.schema.Sharer.bulkCreate(newSharers,
                   {transaction: t}).then(function(success) {
+                    dbActions.sequelize.query('UPDATE metadata SET trial_count = (select COUNT(*) FROM sharers WHERE trial = ?) WHERE id = ?', {
+                      replacements: 
+                    })
                   completeTransaction();
                 }, function(err){
                   console.error('bulk create error', err);
