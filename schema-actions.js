@@ -147,7 +147,7 @@ RedisSchemaActions.prototype = {
     // console.log('loadmetadataintocache', metadata.toJSON())
     var metadataKey = 'METADATA_'+metadata.id;
     this.redis.multi([
-      ['set', metadataKey, JSON.stringify(metadata.toJSON())],
+      ['set', metadataKey, JSON.stringify((metadata.toJSON ? metadata.toJSON() : metadata))],
       ['expire', metadataKey, 60*60] // 1 hour
     ]).exec(function(err, data) {
       if (err) {
