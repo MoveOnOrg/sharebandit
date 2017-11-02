@@ -1,6 +1,7 @@
 {
   "name": "sharebandit",
   "version": "0.8.0",
+  "private": true,
   "description": "",
   "main": "index.js",
   "scripts": {
