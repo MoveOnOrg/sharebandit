@@ -3,14 +3,20 @@ var url = require('url');
 var bandit = require('./bandit.js');
 var scrape = require('./lib/ogscraper.js');
 
-var init = function(app, schema, sequelize, adminauth, config, moduleLinks) {
+var init = function(app, schema, sequelize, adminauth, config, moduleLinks, schemaActions) {
+
+var templateEnv = {
+  "googleClientId": (config.oauth && config.oauth.clientId) || '',
+  "staticBaseUrl": config.staticBaseUrl || '//s3.amazonaws.com/s3.moveon.org'
+};
+
+var protocolRegex =  /^([^:]+:\/\/)/;
 
 app.get('/admin/',
   adminauth,
   function (req, res) {
     var query = url.parse(req.url, true).query;
-    var params = {'modules':moduleLinks};
-    var protocolRegex =  /^([^:]+:\/\/)/;
+    var params = {'modules': moduleLinks, 'env': templateEnv};
     var sqlQ = {
       offset: query.offset || 0,
       limit: 50,
@@ -36,8 +42,8 @@ app.get('/admin/',
 
 addEditPost = function (req, res) {
   var params = {};
-  var protocolRegex =  /^([^:]+:\/\/)/;
   var url = req.body.url.replace(protocolRegex, '');
+  url = url.replace(/\?.*/, ''); // strip parameters, because we do not support them
   var maxVersion = _.reduce(req.body.version, function(result, value, key) {
     if (key != 'new' && parseInt(value) > result) {
       return parseInt(value);
@@ -79,6 +85,7 @@ addEditPost = function (req, res) {
     else {
       metadata.id = key;
       schema.Metadata.update(metadata, {where: {id: key}});
+      schemaActions.loadMetadataIntoCache(metadata);
     }
 
   });
@@ -90,8 +97,10 @@ addEditPost = function (req, res) {
 app.get('/admin/add/',
   adminauth,
   function (req, res) {
-    res.render('admin/edit', {url: '', variants: [{id: 'new', headline: '', text: '', image_url: ''}]});
-	}
+    res.render('admin/edit', {'env': templateEnv,
+                              'url': '',
+                              'variants': [{id: 'new', headline: '', text: '', image_url: ''}]});
+  }
 );
 
 app.post('/admin/add/',
@@ -102,7 +111,7 @@ app.post('/admin/add/',
 app.get('/admin/edit/*',
   adminauth,
   function (req, res) {
-    var params = {variants: []};
+    var params = {'env': templateEnv, 'variants': []};
 
     schema.Metadata.findAll({
       where: {
@@ -272,7 +281,7 @@ app.get('/admin/reportjson/stats/*', adminauth, jsonQuery(variantReports));
 app.get('/admin/report/*',
   adminauth,
   function (req, res) {
-    var params = {variants: []};
+    var params = {'env': templateEnv, 'variants': []};
     schema.Metadata.findAll({
       where: {
         url: req.params[0]

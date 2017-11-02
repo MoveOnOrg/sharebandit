@@ -1,27 +1,31 @@
 {
   "name": "sharebandit",
   "version": "0.8.0",
+  "private": true,
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node_modules/.bin/istanbul test node_modules/.bin/_mocha -- tests/index.js"
+    "test": "node_modules/.bin/istanbul test node_modules/.bin/_mocha -- tests/index.js",
+    "cronjob": "node ./cronProcess.js",
+    "lint": "eslint"
   },
   "author": "",
   "license": "GPLv2+",
   "devDependencies": {
-    "bluebird": "^3.5.0",
+    "eslint": "^4.9.0",
     "expect.js": "^0.3.1",
-    "express": "^4.13.4",
+    "fakeredis": "git://github.com/schuyler1d/fakeredis.git#hyperloglog-stub",
     "istanbul": "^0.4.3",
     "mocha": "^2.4.5",
-    "request": "^2.81.0",
-    "sequelize": "^3.30.2",
-    "sqlite3": "^3.1.2",
-    "swig": "^1.4.2"
+    "request": "^2.81.0"
   },
   "dependencies": {
+    "aws-serverless-express": "^3.0.2",
     "base-64": "^0.1.0",
+    "bluebird": "^3.5.0",
     "body-parser": "^1.15.0",
+    "connect-redis": "^3.3.0",
+    "express": "^4.13.4",
     "express-session": "^1.13.0",
     "googleapis": "^2.1.7",
     "html-metadata": "^1.6.3",
@@ -29,7 +33,10 @@
     "jsdom": "^8.3.1",
     "lodash": "^4.17.4",
     "pg": "^4.4.6",
+    "preq": "^0.5.2",
     "probability-distributions": "^0.8.5",
-    "sequelize": "^3.30.2"
+    "sequelize": "^3.30.2",
+    "sqlite3": "^3.1.2",
+    "swig": "^1.4.2"
   }
 }

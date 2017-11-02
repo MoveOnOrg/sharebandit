@@ -1,5 +1,6 @@
-ShareBandit
-===========
+[![Build Status](https://travis-ci.org/MoveOnOrg/sharebandit.svg?branch=master)](https://travis-ci.org/MoveOnOrg/sharebandit)
+
+# ShareBandit
 
 ShareBandit automatically tests Facebook sharing Title-Description-Image possibilities, and then promotes the most successful one as a winner becomes clear.
 
@@ -9,8 +10,7 @@ It is a system that runs separately from your regular website, but with some int
 * See /docs/INTEGRATION.md for instructions to integrate ShareBandit with a site.
 * See /docs/MODULES.md for instructions to add modules to ShareBandit.
 
-How to run locally:
--------------------
+## How to run locally:
 
 1. `git clone https://github.com/MoveOnOrg/sharebandit.git`
 
@@ -19,7 +19,7 @@ How to run locally:
 3. In the root of the app run `npm install` to get and install all packages
 
 4. Config base template
-   * `cp /config/config.json.template /config/config.json`
+   * `cp config/config.json.template config/config.json`
    * change "baseUrl" to e.g. "http://localhost:3000"
    * change "port" to e.g. 3000
    * add a secret string for "sessionSecret" key
@@ -56,19 +56,18 @@ How to run locally:
           * You can also add "users": ["youremail@gmail.com", "yourfriend@gmail.com"]
           *  and/or "ip_addresses": ["127.0.0.1", "<whitelisted ip addresses>"]
 
-How to run (after installing node):
------------------------------------
+## How to run (after installing node):
 
    `node index.js`
    # and then navigate to http://localhost:3000/
 
-How to run tests :
-------------------
+## How to run tests
 
-   `npm test`
+   `npm run test`
 
-How to Install in Production:
------------------------------
+## How to Install in Production:
+
+### Classic hosting
 
 You can do this all ways that run nodejs apps in production.
 Included in the codebase is the nginx/ directory that could help facilitate that
@@ -77,3 +76,38 @@ on Ubuntu systems.
 1. Run (or run the commands yourself) nginx/install.sh as root
 2. Copy the sharebandit.conf file to /etc/nginx/sites-enabled/
 3. Install your SSL certificates at /etc/nginx/cert.* (or modify sharebandit.conf to map your server layout)
+
+#### How to run in production
+
+if you haven't already, install pm2
+$sudo npm install pm2 --global
+pm2 pm2.yml --env production
+
+#### AWS Lambda (serverless deploy)
+
+1. Make an RDS postgres database and Redis instance (for session storage)
+2. Set the config variables into a file called `./config/lambda.json`
+   - Connect the redis session store with
+
+```
+  "redisSessionStore": {
+    "prefix": "SHAREBANDIT_",
+    "host": "yourRedisHost.0001.usw1.cache.amazonaws.com",
+    "port": 6379
+  },
+```
+
+3. Install Claudia.js with:
+   `npm install claudia -g`
+   and see the rest of the [Claudia documentation](https://claudiajs.com/tutorials/installing.html) if you do not have an amazon environment already
+4. Then create your api gateway and lambda instance with a (single!) command that will START like this:
+   `claudia create --handler lambda.handler --deploy-proxy-api <MORE OPTIONS HERE>`
+   Run (`claudia create --help` for more info. We recommend running behind a vpc, with a security group, etc)
+   It's also likely you will need to use the `--use-s3-bucket` option because the final lambda zip file will be large.
+
+### Caching
+
+If you expect traffic for ~1 million shares for a single url or more than ~300k clicks/actions per hour,
+then we recommend enabling our Redis caching layer.
+
+See [/docs/CACHING.md](./docs/CACHING.md)
