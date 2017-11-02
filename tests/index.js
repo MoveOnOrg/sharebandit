@@ -330,10 +330,8 @@ describe('server', function() {
     it('jsonall should have accurate counts', function(done) {
       request.get(baseUrl + '/jsonall/' + VARS.URL_AB_NOHTTP, function(err, response, body) {
         var data = JSON.parse(body);
-        data.variants.forEach(function(variant) {
-          expect(variant.action_count).to.be.a('number');
-          expect(variant.success_count).to.be.a('number');
-        });
+        expect(data.variants[1].action_count).to.be.greaterThan(10);
+        expect(data.variants[1].success_count).to.be.greaterThan(10);
         done();
       });
     });

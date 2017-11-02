@@ -62,17 +62,17 @@ SchemaActions.prototype = {
     return new Promise(function (trialLookupResolve, trialLookupReject) {
       redisActions.trialLookup(url, abver).then(function(data) {
         if (data) {
-          trialLookupResolve(data)
+          trialLookupResolve(data);
         } else {
           dbActions.trialLookup(url, abver).then(function(dbData) {
             if (dbData) {
-              redisActions.loadMetadataIntoCache(dbData)
+              redisActions.loadMetadataIntoCache(dbData);
             }
-            trialLookupResolve(dbData)
+            trialLookupResolve(dbData);
           }, trialLookupReject);
         }
-      }, trialLookupReject)
-    })
+      }, trialLookupReject);
+    });
   },
   getSuccessfulShareCountsByTrial: function(url, successMetric) {
     var redisActions = this.redisActions;
@@ -346,17 +346,17 @@ RedisSchemaActions.prototype = {
     return new Promise(function (processDataResolve, processDataReject) {
 
       var anotherRound = function(data) {
-        console.log('processing data', data.startOffset, (data.allKeys || []).length, Object.keys(data || {}))
+        // console.log('processing data', data.startOffset, (data.allKeys || []).length, Object.keys(data || {}));
         var newOffset = data.startOffset + maxProcessCount;
         if (!shouldContinue(1000 * 60 * 20) // give ourselves 20 seconds, at least
             || (options && options.onlyOnce && newOffset >= (data.allKeys || []).length)
-           ) {
+        ) {
           return processDataResolve();
         } else if (newOffset >= data.allKeys.length) {
           setTimeout(function() { // wait 2 seconds before starting from scratch
             self.processData(dbActions, null, null, 100, 0)
               .then(anotherRound, processDataReject);
-          }, 2000)
+          }, 2000);
         } else {
           self.processData(dbActions, data.allKeys, data.allShareEvents, maxProcessCount, newOffset)
             .then(anotherRound, processDataReject);
@@ -385,7 +385,7 @@ RedisSchemaActions.prototype = {
         getProcessKeys = self.getProcessKeys;
       }
       getProcessKeys(r, events, maxProcessCount, startOffset, function(err, baseSlice, allShareEvents) {
-        // console.log('DEBUG keys', Object.keys(allShareEvents))
+        // console.log('DEBUG keys', Object.keys(allShareEvents));
         var rv = {'allKeys': baseSlice,
           'allShareEvents': allShareEvents,
           'startOffset': startOffset || 0,
@@ -405,12 +405,12 @@ RedisSchemaActions.prototype = {
             }
           }
         }).then(function(dbSharers) {
-          // console.log('db results to match cache', dbSharers)
+          // console.log('db results to match cache', dbSharers);
           dbSharers.forEach(function(dbShare) {
             dbRecords[dbShare.dataValues.trial + '_' + dbShare.dataValues.key] = dbShare.dataValues.id;
           });
           dbActions.sequelize.transaction(function(t) {
-            // console.log('DEBUG transactioning: keys:', keySliceToProcess.length)
+            // console.log('DEBUG transactioning: keys:', keySliceToProcess.length);
             return new Promise(function (completeTransaction, rollbackTransaction) {
               var newToDb = {};
               for (var i=0,l=keySliceToProcess.length; i<l; i++) {
@@ -426,13 +426,6 @@ RedisSchemaActions.prototype = {
                       }).spread(function(results, metadata) {}, function(err) {
                         console.error('ERROR update raw sql', err);
                       });
-
-                      dbActions.sequelize.query('UPDATE metadata SET '+event+'_count = (SELECT SUM('+event+'_count) FROM sharers WHERE trial = ?) WHERE id = ?', {
-                        replacements: [dbRecords[abver_abid], dbRecords[abver_abid]],
-                        transaction: t
-                      }).spread(function(results, metadata) {}, function(err) {
-                        console.error('ERROR update raw sql', err);
-                      });
                     }
                   } else {
                     if (!(abver_abid in newToDb)) {
@@ -443,17 +436,36 @@ RedisSchemaActions.prototype = {
                 });
               }
               var newSharers = Object.keys(newToDb).map(function(s) {return newToDb[s]; });
-              // console.log('DEBUG new Sharers', newSharers.length)
+              // console.log('DEBUG new Sharers', newSharers.length);
+
+              var updateMetaDataFromSharers = function () {
+                dbActions.sequelize.query('UPDATE metadata SET '
+                      + 'action_count = (SELECT SUM(action_count) FROM sharers WHERE trial = metadata.id),'
+                      + 'success_count = (SELECT SUM(success_count) FROM sharers WHERE trial = metadata.id),'
+                      + 'trial_count = (SELECT COUNT(*) FROM sharers WHERE trial = metadata.id)'
+                      + ' WHERE id IN (?)', {
+                  replacements: [keySliceToProcess.map(function(abver_abid) {return abver_abid.split('_')[0];})],
+                  transaction: t
+                }).then(function(res) {
+                  // console.log('update query results', res);
+                  completeTransaction();
+                }, function(err) {
+                  console.error('ERROR update raw sql', err);
+                  completeTransaction();
+                  // this query is ok to fail
+                });
+              };
+
               if (newSharers.length) {
                 dbActions.schema.Sharer.bulkCreate(newSharers,
                   {transaction: t}).then(function(success) {
-                  completeTransaction();
+                  updateMetaDataFromSharers();
                 }, function(err){
                   console.error('bulk create error', err);
                   rollbackTransaction(err);
                 });
               } else {
-                completeTransaction();
+                updateMetaDataFromSharers();
               }
             });
           }).then(function(transactionComplete) {
