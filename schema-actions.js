@@ -447,9 +447,6 @@ RedisSchemaActions.prototype = {
               if (newSharers.length) {
                 dbActions.schema.Sharer.bulkCreate(newSharers,
                   {transaction: t}).then(function(success) {
-                    dbActions.sequelize.query('UPDATE metadata SET trial_count = (select COUNT(*) FROM sharers WHERE trial = ?) WHERE id = ?', {
-                      replacements: 
-                    })
                   completeTransaction();
                 }, function(err){
                   console.error('bulk create error', err);
