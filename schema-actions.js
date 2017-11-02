@@ -427,7 +427,7 @@ RedisSchemaActions.prototype = {
                         console.error('ERROR update raw sql', err);
                       });
 
-                      dbActions.sequelize.query('UPDATE metadata SET '+event+'_count = (SELECT SUM('+event+'_count WHERE trial = ?) FROM sharers WHERE id = ?)', {
+                      dbActions.sequelize.query('UPDATE metadata SET '+event+'_count = (SELECT SUM('+event+'_count) FROM sharers WHERE trial = ?) WHERE id = ?', {
                         replacements: [dbRecords[abver_abid], dbRecords[abver_abid]],
                         transaction: t
                       }).spread(function(results, metadata) {}, function(err) {

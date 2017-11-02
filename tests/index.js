@@ -327,6 +327,17 @@ describe('server', function() {
       })
     });
 
+    it('jsonall should have accurate counts', function(done) {
+      request.get(baseUrl + '/jsonall/' + VARS.URL_AB_NOHTTP, function(err, response, body) {
+        var data = JSON.parse(body);
+        data.variants.forEach(function(variant) {
+          expect(variant.action_count).to.be.a('number');
+          expect(variant.success_count).to.be.a('number');
+        });
+        done();
+      });
+    });
+
     it('should now be weighted with bandit', testJsBanditResponse(20, function(timesEach) {
       console.log('inbalance after 0.8 preference', timesEach);
       expect(timesEach[0] > timesEach[1]).to.equal(true);
