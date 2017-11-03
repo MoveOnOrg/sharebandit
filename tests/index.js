@@ -335,7 +335,13 @@ describe('server', function() {
         done();
       });
     });
-
+    it('should be able to update Facebook', function(done) {
+      realApp.schemaActions.updateFacebookCache(function shouldContinue(time, data) {
+        expect(data.length).to.be.greaterThan(1); // 2 first time, and probably 4 the second
+        done();
+        return false
+      })
+    })
     it('should now be weighted with bandit', testJsBanditResponse(20, function(timesEach) {
       console.log('inbalance after 0.8 preference', timesEach);
       expect(timesEach[0] > timesEach[1]).to.equal(true);
