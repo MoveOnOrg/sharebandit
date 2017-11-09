@@ -439,12 +439,17 @@ RedisSchemaActions.prototype = {
               // console.log('DEBUG new Sharers', newSharers.length);
 
               var updateMetaDataFromSharers = function () {
+                var abvers = keySliceToProcess.map(function(abver_abid) {return abver_abid.split('_')[0];})
                 dbActions.sequelize.query('UPDATE metadata SET '
                       + 'action_count = (SELECT SUM(action_count) FROM sharers WHERE trial = metadata.id),'
                       + 'success_count = (SELECT SUM(success_count) FROM sharers WHERE trial = metadata.id),'
                       + 'trial_count = (SELECT COUNT(*) FROM sharers WHERE trial = metadata.id)'
                       + ' WHERE id IN (?)', {
-                  replacements: [keySliceToProcess.map(function(abver_abid) {return abver_abid.split('_')[0];})],
+                  replacements: [abvers
+                                 .filter(
+                                   function unique(elem, pos) {
+                                     return abvers.indexOf(elem) == pos;
+                                   })],
                   transaction: t
                 }).then(function(res) {
                   // console.log('update query results', res);
