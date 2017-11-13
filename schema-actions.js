@@ -151,7 +151,7 @@ RedisSchemaActions.prototype = {
       ['expire', metadataKey, 60*60] // 1 hour
     ]).exec(function(err, data) {
       if (err) {
-        console.error('error saving metadata cache', metadata.id, err);
+        console.log('error saving metadata cache', metadata.id, err);
       }
     });
   },
@@ -423,8 +423,8 @@ RedisSchemaActions.prototype = {
                       dbActions.sequelize.query('UPDATE sharers SET '+event+'_count = '+event+'_count + ? WHERE id = ?', {
                         replacements: [parseInt(updateCount), dbRecords[abver_abid]],
                         transaction: t
-                      }).spread(function(results, metadata) {}, function(err) {
-                        console.error('ERROR update raw sql', err);
+                      }).then(function() {}, function(err) {
+                        console.log('ERROR update raw sql', err);
                       });
                     }
                   } else {
@@ -439,25 +439,23 @@ RedisSchemaActions.prototype = {
               // console.log('DEBUG new Sharers', newSharers.length);
 
               var updateMetaDataFromSharers = function () {
-                var abvers = keySliceToProcess.map(function(abver_abid) {return abver_abid.split('_')[0];})
+                var abvers = {}; // unique list of abver (i.e. metadata.ids) we should update
+                keySliceToProcess.forEach(function(abver_abid) {
+                  abvers[ abver_abid.split('_')[0] ] = 1;
+                });
                 dbActions.sequelize.query('UPDATE metadata SET '
                       + 'action_count = (SELECT SUM(action_count) FROM sharers WHERE trial = metadata.id),'
                       + 'success_count = (SELECT SUM(success_count) FROM sharers WHERE trial = metadata.id),'
                       + 'trial_count = (SELECT COUNT(*) FROM sharers WHERE trial = metadata.id)'
                       + ' WHERE id IN (?)', {
-                  replacements: [abvers
-                                 .filter(
-                                   function unique(elem, pos) {
-                                     return abvers.indexOf(elem) == pos;
-                                   })],
+                  replacements: [Object.keys(abvers)],
                   transaction: t
                 }).then(function(res) {
                   // console.log('update query results', res);
                   completeTransaction();
                 }, function(err) {
-                  console.error('ERROR update raw sql', err);
-                  completeTransaction();
-                  // this query is ok to fail
+                  console.log('ERROR update raw sql', err);
+                  rollbackTransaction(err);
                 });
               };
 
@@ -466,7 +464,7 @@ RedisSchemaActions.prototype = {
                   {transaction: t}).then(function(success) {
                   updateMetaDataFromSharers();
                 }, function(err){
-                  console.error('bulk create error', err);
+                  console.log('bulk create error', err);
                   rollbackTransaction(err);
                 });
               } else {
@@ -494,7 +492,7 @@ RedisSchemaActions.prototype = {
             });
             r.multi(commands).exec(function(err) {
               if (err) {
-                console.error('Failed to resync cache to db!'
+                console.log('Failed to resync cache to db!'
                             + 'At this point, your db and cache are out of sync'
                             + 'and future syncs will inflate rates. Error:', err);
                 // re-trying, etc would only make this worse :-(
@@ -505,11 +503,11 @@ RedisSchemaActions.prototype = {
               }
             });
           }, function(transactionErr) {
-            console.error('transaction error', transactionErr);
+            console.log('transaction error', transactionErr);
             processDataReject(transactionErr);
           });
         }, function(dbSharerSelectErr) {
-          console.error('db error', dbSharerSelectErr);
+          console.log('db error', dbSharerSelectErr);
           processDataReject(dbSharerSelectErr);
         });
       });
