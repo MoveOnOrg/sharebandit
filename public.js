@@ -1,7 +1,7 @@
 var url = require('url');
 var _ = require('lodash');
 var bandit = require('./bandit.js');
-var Promise = require("bluebird");
+var Promise = require('bluebird');
 
 var SOCIAL_AGENTS = ['facebookexternalhit', 'Facebot', 'Twitterbot'];
 var socialAgentRegexp = new RegExp(SOCIAL_AGENTS.join('|'));
@@ -15,7 +15,7 @@ var init = function(app, schema, schemaActions, config) {
             + '/r/'
             + (abver || '0') + '/'
             + href
-           );
+    );
   };
 
   // Empty page to confirm site is up
@@ -33,126 +33,126 @@ var init = function(app, schema, schemaActions, config) {
   });
 
   app.get('/r/:abver/:domain*',
-          function (req, res) {
-            //NOTE: any caching layer:
-            // in theory, you can whitelist domain matches, and if there is no abver,
-            // just redirect skip
-            // we can also, in theory cache it for facebook clients + abver
-            if (! (req.params.domain in config.domain_whitelist)) {
-              return res.status(404).send("Not found");
-            }
-            res.vary('User-Agent')
-            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-            res.setHeader("Pragma", "no-cache");
-            res.setHeader("Expires", "0");
+    function (req, res) {
+      //NOTE: any caching layer:
+      // in theory, you can whitelist domain matches, and if there is no abver,
+      // just redirect skip
+      // we can also, in theory cache it for facebook clients + abver
+      if (! (req.params.domain in config.domain_whitelist)) {
+        return res.status(404).send('Not found');
+      }
+      res.vary('User-Agent');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
 
-            var domainInfo = config.domain_whitelist[req.params.domain];
-            var pathname = req.params[0];
-            var proto = domainInfo.proto;
-            var forwardedQuery = _.clone(req.query);
-            forwardedQuery.abver = req.params.abver;
+      var domainInfo = config.domain_whitelist[req.params.domain];
+      var pathname = req.params[0];
+      var proto = domainInfo.proto;
+      var forwardedQuery = _.clone(req.query);
+      forwardedQuery.abver = req.params.abver;
 
-            var furl = url.format({
-              'protocol': proto,
-              'host': req.params.domain,
-              'pathname': decodeURIComponent(pathname),
-              'query': forwardedQuery
-            });
+      var furl = url.format({
+        'protocol': proto,
+        'host': req.params.domain,
+        'pathname': decodeURIComponent(pathname),
+        'query': forwardedQuery
+      });
 
-            /// 1. Am I Facebook Crawler or TwitterBot?
-            //https://developers.facebook.com/docs/sharing/webmasters/crawler
-            if (socialAgentRegexp.test(req.get('User-Agent')) && parseInt(req.params.abver) >= 0 ) {
+      /// 1. Am I Facebook Crawler or TwitterBot?
+      //https://developers.facebook.com/docs/sharing/webmasters/crawler
+      if (socialAgentRegexp.test(req.get('User-Agent')) && parseInt(req.params.abver) >= 0 ) {
 
-              var murl = (req.params.domain + decodeURIComponent(pathname || '/').replace(/.fb\d+/,''));
-              schemaActions.trialLookup(murl, parseInt(req.params.abver)).then(function(trial) {
-                if (!trial) {
-                  if (/testshare/.test(pathname)) {
-                    res.render('shareheaders', {
-                      'extraProperties': domainInfo.extraProperties || [],
-                      'extraMeta': domainInfo. extraMeta || [],
-                      'title': "Fooooo",
-                      'description': 'basdfasdf',
-                    });
-                  } else if (req.params.abver == '0') {
-                    // if facebook is sent a sharebandit URL with no treatment id render best treatment metadata and refresh fb cache
-                      schema.Metadata.findOne({
-                        'where': { 'url':murl },
-                        'order': [[ 'success_count', 'DESC' ]]
-                      }).then(function(bestTrial) {
-                        if (bestTrial) {
-                          res.render('shareheaders', {
-                            'extraProperties': domainInfo.extraProperties || [],
-                            'title': bestTrial.headline,
-                            'description': bestTrial.text,
-                            'image': bestTrial.image_url,
-                            'fullUrl': config.baseUrl + req.originalUrl
-                          });
-                        } else {
-                          return res.status(404).send("Not found");
-                        }
-                      });
-                  } else {
-                    return res.status(404).send("Not found");
-                  }
+        var murl = (req.params.domain + decodeURIComponent(pathname || '/').replace(/.fb\d+/,''));
+        schemaActions.trialLookup(murl, parseInt(req.params.abver)).then(function(trial) {
+          if (!trial) {
+            if (/testshare/.test(pathname)) {
+              res.render('shareheaders', {
+                'extraProperties': domainInfo.extraProperties || [],
+                'extraMeta': domainInfo. extraMeta || [],
+                'title': 'Fooooo',
+                'description': 'basdfasdf',
+              });
+            } else if (req.params.abver == '0') {
+              // if facebook is sent a sharebandit URL with no treatment id render best treatment metadata and refresh fb cache
+              schema.Metadata.findOne({
+                'where': { 'url':murl },
+                'order': [[ 'success_count', 'DESC' ]]
+              }).then(function(bestTrial) {
+                if (bestTrial) {
+                  res.render('shareheaders', {
+                    'extraProperties': domainInfo.extraProperties || [],
+                    'title': bestTrial.headline,
+                    'description': bestTrial.text,
+                    'image': bestTrial.image_url,
+                    'fullUrl': config.baseUrl + req.originalUrl
+                  });
                 } else {
-                  // console.log('FACEBOOK', req.originalUrl, furl);
-                  var renderFacebook = function() {
-                    res.render('shareheaders', {
-                      'extraProperties': domainInfo.extraProperties || [],
-                      'extraMeta': domainInfo.extraMeta || [],
-                      'title': trial.headline,
-                      'description': trial.text,
-                      'image': trial.image_url,
-                      'fullUrl': config.baseUrl + req.originalUrl
-                    });
-                  };
-                  if (!req.params.abver) {
-                    renderFacebook();
-                  }
-                  //UPSERT the sharer if abid is present:
-                  if (req.query.abid) {
-                    var newsharer = {'key': req.query.abid,
-                                     'trial': (parseInt(req.params.abver) || 0)
-                                    };
-                    schemaActions.newShare(newsharer, parseInt(req.params.abver) || 0).then(function() {
-                      if (req.params.abver) {
-                        renderFacebook();
-                      }
-                    });
-                  } else {
-                    if (req.params.abver) {
-                      renderFacebook();
-                    }
-                  }
+                  return res.status(404).send('Not found');
                 }
               });
-            /// 2. Am I a User?
             } else {
-              if (!req.query.absync) {
-                res.redirect(furl);
-              }
-              //ASSUMING:
-              //  on a share click, we INSERT a sharer with the key
-              //  on creation of a trial (metadata row), we create a sharer with key=''
-              //We might want to consider auto-adding the row, AND/OR verifying that the url is correct
-              // e.g. with AND trial=(SELECT id FROM metadata WHERE url=$$trialurl) -- but that would slow it down
+              return res.status(404).send('Not found');
+            }
+          } else {
+            // console.log('FACEBOOK', req.originalUrl, furl);
+            var renderFacebook = function() {
+              res.render('shareheaders', {
+                'extraProperties': domainInfo.extraProperties || [],
+                'extraMeta': domainInfo.extraMeta || [],
+                'title': trial.headline,
+                'description': trial.text,
+                'image': trial.image_url,
+                'fullUrl': config.baseUrl + req.originalUrl
+              });
+            };
+            if (!req.params.abver) {
+              renderFacebook();
+            }
+            //UPSERT the sharer if abid is present:
+            if (req.query.abid) {
+              var newsharer = {'key': req.query.abid,
+                'trial': (parseInt(req.params.abver) || 0)
+              };
+              schemaActions.newShare(newsharer, parseInt(req.params.abver) || 0).then(function() {
+                if (req.params.abver) {
+                  renderFacebook();
+                }
+              });
+            } else {
               if (req.params.abver) {
-                var cautious_id = (parseInt(req.params.abver) || 0);
-                schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/false)
-                  .then(function(value) {
-                    if (req.query.absync) {
-                      res.redirect(furl);
-                    }
-                  }, function(reason) {
-                    console.log('Failed save of transaction ' + req.originalUrl
-                                + ' -- ' + reason);
-                    if (req.query.absync) {
-                      res.redirect(furl); // redirect anyway, since the client shouldn't care
-                    }
-                  });
+                renderFacebook();
               }
             }
-          });
+          }
+        });
+        /// 2. Am I a User?
+      } else {
+        if (!req.query.absync) {
+          res.redirect(furl);
+        }
+        //ASSUMING:
+        //  on a share click, we INSERT a sharer with the key
+        //  on creation of a trial (metadata row), we create a sharer with key=''
+        //We might want to consider auto-adding the row, AND/OR verifying that the url is correct
+        // e.g. with AND trial=(SELECT id FROM metadata WHERE url=$$trialurl) -- but that would slow it down
+        if (req.params.abver) {
+          var cautious_id = (parseInt(req.params.abver) || 0);
+          schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/false)
+            .then(function(value) {
+              if (req.query.absync) {
+                res.redirect(furl);
+              }
+            }, function(reason) {
+              console.log('Failed save of transaction ' + req.originalUrl
+                                + ' -- ' + reason);
+              if (req.query.absync) {
+                res.redirect(furl); // redirect anyway, since the client shouldn't care
+              }
+            });
+        }
+      }
+    });
 
   //smallest GIF
   //http://probablyprogramming.com/2009/03/15/the-tiniest-gif-ever
@@ -162,33 +162,33 @@ var init = function(app, schema, schemaActions, config) {
   //smallgif = [71,73,70,56,57,97,1,0,1,0,0,0,0,33,249,4,1,10,0,1,0,44,0,0,0,0,1,0,1,0,0,2,2,76,1,0,59].map(function(x){return String.fromCharCode(x);}).join('');
   //TODO: abstract out the similarities with this code and the /r/ code above (even though above, there are more paths)
   app.get('/a/:abver/:domain*',
-          function (req, res) {
-            res.set('Content-Type', 'image/gif');
-            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-            if (!req.query.absync) {
+    function (req, res) {
+      res.set('Content-Type', 'image/gif');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      if (!req.query.absync) {
+        res.end(smallgif, 'binary');
+      }
+      if (req.params.abver) {
+        var cautious_id = (parseInt(req.params.abver) || 0);
+        schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/true)
+          .then(function() {
+            if (req.query.absync) {
               res.end(smallgif, 'binary');
             }
-            if (req.params.abver) {
-              var cautious_id = (parseInt(req.params.abver) || 0);
-              schemaActions.newEvent(cautious_id, req.query.abid || '', /*isAction=*/true)
-                .then(function() {
-                  if (req.query.absync) {
-                    res.end(smallgif, 'binary');
-                  }
-                });
-            } else {
-              if (req.query.absync) {
-                res.end(smallgif, 'binary');
-              }
-            }
           });
+      } else {
+        if (req.query.absync) {
+          res.end(smallgif, 'binary');
+        }
+      }
+    });
   var js_result = function(successMetric) {
     return function (req, res) {
       if (! (req.params.domain in config.domain_whitelist)) {
-        return res.status(404).send("Not found");
+        return res.status(404).send('Not found');
       }
       res.set('Content-Type', 'text/javascript');
-      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
       var proto = config.domain_whitelist[req.params.domain].proto;
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
@@ -205,13 +205,13 @@ var init = function(app, schema, schemaActions, config) {
   var json_result = function (successMetric) {
     return function (req, res) {
       if (! (req.params.domain in config.domain_whitelist)) {
-        return res.status(404).send("Not found");
+        return res.status(404).send('Not found');
       }
-      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
       bandit.choose(murl, successMetric, schemaActions).then(function(trialChoice) {
-        schemaActions.trialLookup(murl, trialChoise).then(function(trialMetadata) {
+        schemaActions.trialLookup(murl, trialChoice).then(function(trialMetadata) {
           res.jsonp({
             'id': trialMetadata.id,
             'url': trialMetadata.url,
@@ -221,7 +221,7 @@ var init = function(app, schema, schemaActions, config) {
             'shareurl': app._shareUrl('', trialChoice) + murl
           });
         }, function(err) {
-          console.error('trial metadata not found', err)
+          console.error('trial metadata not found', err);
         });
       });
     };
@@ -249,6 +249,6 @@ var init = function(app, schema, schemaActions, config) {
       return res.jsonp(params);
     });
   });
-}
+};
 
 module.exports = init;
