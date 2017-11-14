@@ -3,6 +3,9 @@ var _ = require('lodash');
 var bandit = require('./bandit.js');
 var Promise = require("bluebird");
 
+var SOCIAL_AGENTS = ['facebookexternalhit', 'Facebot', 'Twitterbot'];
+var socialAgentRegexp = new RegExp(SOCIAL_AGENTS.join('|'));
+
 var init = function(app, schema, schemaActions, config) {
 
   app._shareUrl = function(href, abver) {
@@ -18,6 +21,15 @@ var init = function(app, schema, schemaActions, config) {
   // Empty page to confirm site is up
   app.get('/ping', function (req, res) {
     res.end('OK');
+  });
+
+  app.get('/robots.txt', function (req, res) {
+    res.end(
+      'User-agent: *\nDisallow: /\n\n'
+        + SOCIAL_AGENTS.map(function(bot) {
+          return 'User-agent: ' + bot + '*\nAllow: /\n';
+        }).join('\n')
+    );
   });
 
   app.get('/r/:abver/:domain*',
@@ -49,7 +61,7 @@ var init = function(app, schema, schemaActions, config) {
 
             /// 1. Am I Facebook Crawler or TwitterBot?
             //https://developers.facebook.com/docs/sharing/webmasters/crawler
-            if (/facebookexternalhit|Facebot|Twitterbot/.test(req.get('User-Agent')) && parseInt(req.params.abver) >= 0 ) {
+            if (socialAgentRegexp.test(req.get('User-Agent')) && parseInt(req.params.abver) >= 0 ) {
 
               var murl = (req.params.domain + decodeURIComponent(pathname || '/').replace(/.fb\d+/,''));
               schemaActions.trialLookup(murl, parseInt(req.params.abver)).then(function(trial) {
