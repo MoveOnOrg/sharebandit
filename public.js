@@ -20,10 +20,12 @@ var init = function(app, schema, schemaActions, config) {
 
   // Empty page to confirm site is up
   app.get('/ping', function (req, res) {
+    res.setHeader('Content-Type', 'text/plain');
     res.end('OK');
   });
 
   app.get('/robots.txt', function (req, res) {
+    res.setHeader('Content-Type', 'text/plain');
     res.end(
       'User-agent: *\nDisallow: /\n\n'
         + SOCIAL_AGENTS.map(function(bot) {
