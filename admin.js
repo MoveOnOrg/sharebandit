@@ -108,6 +108,19 @@ app.post('/admin/add/',
   addEditPost
 );
 
+if (config.backdoorAdminAPIsecret && config.backdoorAdminAPIsecret.length > 63) {
+  app.post('/api/admin/add/',
+    function(req, res, next) {
+      if (req.query && req.query.secret===config.backdoorAdminAPIsecret) {
+        next();
+      } else {
+        res.redirect("/");
+      }
+    },
+    addEditPost
+    );
+}
+
 app.get('/admin/edit/*',
   adminauth,
   function (req, res) {
