@@ -413,19 +413,22 @@ RedisSchemaActions.prototype = {
             // console.log('DEBUG transactioning: keys:', keySliceToProcess.length);
             return new Promise(function (completeTransaction, rollbackTransaction) {
               var newToDb = {};
+              var dbDone = {};
               for (var i=0,l=keySliceToProcess.length; i<l; i++) {
                 var abver_abid = keySliceToProcess[i];
                 var split_abver_abid = abver_abid.split('_');
                 events.forEach(function(event) {
                   var updateCount = allShareEvents[abver_abid][event];
                   if (abver_abid in dbRecords) {
-                    if (updateCount && parseInt(updateCount)) {
+                    var doneKey = event + '_' + dbRecords[abver_abid];
+                    if (updateCount && parseInt(updateCount) && !(doneKey in dbDone)) {
                       dbActions.sequelize.query('UPDATE sharers SET '+event+'_count = '+event+'_count + ? WHERE id = ?', {
                         replacements: [parseInt(updateCount), dbRecords[abver_abid]],
                         transaction: t
                       }).then(function() {}, function(err) {
                         console.log('ERROR update raw sql', err);
                       });
+                      dbDone[doneKey] = 1;
                     }
                   } else {
                     if (!(abver_abid in newToDb)) {
