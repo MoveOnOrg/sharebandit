@@ -413,22 +413,16 @@ RedisSchemaActions.prototype = {
             // console.log('DEBUG transactioning: keys:', keySliceToProcess.length);
             return new Promise(function (completeTransaction, rollbackTransaction) {
               var newToDb = {};
-              var dbDone = {};
+              var updateDb = {};
               for (var i=0,l=keySliceToProcess.length; i<l; i++) {
                 var abver_abid = keySliceToProcess[i];
                 var split_abver_abid = abver_abid.split('_');
                 events.forEach(function(event) {
                   var updateCount = allShareEvents[abver_abid][event];
                   if (abver_abid in dbRecords) {
-                    var doneKey = event + '_' + dbRecords[abver_abid];
-                    if (updateCount && parseInt(updateCount) && !(doneKey in dbDone)) {
-                      dbActions.sequelize.query('UPDATE sharers SET '+event+'_count = '+event+'_count + ? WHERE id = ?', {
-                        replacements: [parseInt(updateCount), dbRecords[abver_abid]],
-                        transaction: t
-                      }).then(function() {}, function(err) {
-                        console.log('ERROR update raw sql', err);
-                      });
-                      dbDone[doneKey] = 1;
+                    var updateKey = event + '_' + dbRecords[abver_abid];
+                    if (updateCount && parseInt(updateCount)) {
+                      updateDb[updateKey] = parseInt(updateCount);
                     }
                   } else {
                     if (!(abver_abid in newToDb)) {
@@ -436,6 +430,18 @@ RedisSchemaActions.prototype = {
                     }
                     newToDb[abver_abid][event+'_count'] = updateCount;
                   }
+                });
+              }
+              for (var updateKey in updateDb) {
+                var tokens = updateKey.split('_');
+                var event = tokens[0];
+                var shareId = tokens[1];
+                var updateCount = updateDb[updateKey];
+                dbActions.sequelize.query('UPDATE sharers SET '+event+'_count = '+event+'_count + ? WHERE id = ?', {
+                  replacements: [updateCount, shareId],
+                  transaction: t
+                }).then(function() {}, function(err) {
+                  console.log('ERROR update raw sql', err);
                 });
               }
               var newSharers = Object.keys(newToDb).map(function(s) {return newToDb[s]; });
