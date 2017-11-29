@@ -211,6 +211,12 @@ var init = function(app, schema, schemaActions, config) {
       }
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
+      var xdomain = (req.get('Origin') || req.get('Referer') || '').match(/https?:\/\/([^\/]+)/);
+      if (xdomain && (xdomain[1] in config.domain_whitelist)) {
+        res.setHeader('Access-Control-Allow-Origin', xdomain[0])
+        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD')
+      }
+
       var murl = (req.params.domain + decodeURIComponent(req.params[0] || '/'));
       bandit.choose(murl, successMetric, schemaActions).then(function(trialChoice) {
         schemaActions.trialLookup(murl, trialChoice).then(function(trialMetadata) {
