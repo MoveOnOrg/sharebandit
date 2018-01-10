@@ -10,8 +10,6 @@ It is a system that runs separately from your regular website, but with some int
 * See /docs/INTEGRATION.md for instructions to integrate ShareBandit with a site.
 * See /docs/MODULES.md for instructions to add modules to ShareBandit.
 
-The latest version is 1.0.0 (see [release notes](https://github.com/MoveOnOrg/sharebandit/blob/master/docs/RELEASE_NOTES.md)) which we recommend for production use, while our master branch is where features still in development and testing will be available.
-
 ## How to run locally:
 
 1. `git clone https://github.com/MoveOnOrg/sharebandit.git`
