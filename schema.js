@@ -40,7 +40,7 @@ var init = function(sequelize) {
     ///   and then success_count will be for visits, and actions for completed actions
     key: Sequelize.STRING, //?abid parameter
     trial: {type: Sequelize.INTEGER, //?abver parameter
-            references: { model: Metadata, key: 'id'}},
+            belongsTo: { model: Metadata, key: 'id', onDelete: 'CASCADE'}},
     success_count: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0},
     action_count: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0},
     //updatedAt - auto-created by sequelize
@@ -56,7 +56,7 @@ var init = function(sequelize) {
   var Bandit = sequelize.define('bandit', {
     /// Created for each successful click (action=0) or conversion (action=1)
     trial: {type: Sequelize.INTEGER,
-            references: {model: Metadata, key: 'id'}},
+            belongsTo: {model: Metadata, key: 'id', onDelete: 'CASCADE'}},
     action: {type: Sequelize.BOOLEAN, defaultValue: false},
     time: {type: Sequelize.DATE, defaultValue: Sequelize.NOW}
     //updatedAt - auto-created by sequelize
