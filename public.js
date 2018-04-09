@@ -230,7 +230,11 @@ var init = function(app, schema, schemaActions, config) {
           });
         }, function(err) {
           console.error('trial metadata not found', err);
+          res.status(404).send('Not found');
         });
+      }, function(err) {
+        console.error('trialchoice not found', err);
+        res.status(404).send('Not found');
       });
     };
   };
