@@ -26,13 +26,13 @@ var getUrlTrials = function(url, successMetric, func, schemaActions) {
   return new Promise(function(resolve, reject) {
     schemaActions.getSuccessfulShareCountsByTrial(url, successMetric).then(function(variants) {
       return func(variants, resolve, reject, 1);
-    });
+    }, reject);
   });
 };
 
 function chooseFromVariants(variants, resolve, reject, numResults) {
   if (!variants || variants.length == 0) {
-    resolve(null);
+    reject('no variants');
   };
   var totalSuccess = variants.reduce(function(total, variant) {
     return total + variant.success;
