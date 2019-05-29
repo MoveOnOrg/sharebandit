@@ -36,7 +36,7 @@
     "preq": "^0.5.2",
     "probability-distributions": "^0.8.5",
     "sequelize": "^3.30.2",
-    "sqlite3": "^3.1.2",
+    "sqlite3": "^4.0.8",
     "swig": "^1.4.2"
   }
 }
