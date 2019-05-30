@@ -16,7 +16,7 @@
     "expect.js": "^0.3.1",
     "fakeredis": "git://github.com/schuyler1d/fakeredis.git#hyperloglog-stub",
     "istanbul": "^0.4.3",
-    "mocha": "^2.4.5",
+    "mocha": "^6.1.4",
     "request": "^2.81.0"
   },
   "dependencies": {
